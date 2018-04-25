@@ -1,3 +1,0 @@
-/home/przb86/CLionProjects/KSP/Aufgabe2/cmake-build-debug/CMakeFiles/edit_cache.dir
-/home/przb86/CLionProjects/KSP/Aufgabe2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
-/home/przb86/CLionProjects/KSP/Aufgabe2/cmake-build-debug/CMakeFiles/njvm.dir
