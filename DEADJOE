@@ -1,0 +1,18 @@
+
+*** These modified files were found in JOE when it aborted on Wed Apr 25 17:24:33 2018
+*** JOE was aborted because the terminal closed
+
+*** File '/home/przb86/CLionProjects/KSP/Aufgabe2/.git/MERGE_MSG'
+Merge branch 'master' of https://github.com/prozb/ksp
+
+# Please enter a commit message to explain why this merge is necessary,
+# especially if it merges an updated upstream into a topic branch.
+#
+# Lines starting with '#' will be ignored, and an emptmessage aborts
+# the commit.
+dfssdfsdrefactoring
+*** File '(Unnamed)'
+Test/iodata.csv
+/home/przb86/IdeaProjects/chat/.git/MERGE_MSG
+/home/przb86/IdeaProjects/chat/.git/MERGE_MSG# Lines starting with '#' will be ignored, and an empty message aborts
+/home/przb86/CLionProjects/KSP/Aufgabe2/.git/MERGE_MSG
