@@ -114,6 +114,47 @@ int pop_int(){
     return 0;
 }
 
+void print_command(unsigned int IR){
+    unsigned int i = IR >> 24;
+
+    if(i == PUSHC){
+        if(int_pos < sizeof(int_stack)/ 4) {
+            int to_push = IR & 0x00FFFFFF;
+            printf("pushc %d\n", to_push & 0x00800000 ?
+                                 (to_push | 0xFF000000) : to_push);
+        }else{
+            printf("stack is full\nhalt\n");
+            printf("Ninja Virtual Machine stopped\n");
+            exit(1);
+        }
+    }else if(i == ADD){
+        printf("add\n");
+
+    }else if(i == SUB){
+        printf("sub\n");
+
+    }else if(i == MUL){
+        printf("mul\n");
+
+    }else if(i == WRINT){
+
+        printf("wrint\n");
+    }else if(i == WRCHR){
+
+        printf("wrchr\n");
+    }else if(i == RDINT) {
+
+        printf("rdint \n");
+    }else if(i == RDCHR){
+
+        printf("rdchr \n");
+    }else if(i == DIV){
+
+        printf("div \n");
+    }else if(i == HALT){
+        printf(":\thalt\n");
+    }
+}
 void exec(unsigned int IR){
     unsigned int i = IR >> 24;
 
@@ -121,8 +162,6 @@ void exec(unsigned int IR){
         if(int_pos < sizeof(int_stack)/ 4) {
             int to_push = IR & 0x00FFFFFF;
             push_int(to_push);
-            printf("pushc %d\n", to_push & 0x00800000 ?
-                                 (to_push | 0xFF000000) : to_push);
         }else{
             printf("stack is full\nhalt\n");
             printf("Ninja Virtual Machine stopped\n");
@@ -134,41 +173,34 @@ void exec(unsigned int IR){
         int s_elem = pop_int();
         int sum = s_elem + f_elem;
         push_int(sum);
-
-        printf("add\n");
     }else if(i == SUB){
 
         int f_elem = pop_int();
         int s_elem = pop_int();
         int sub = s_elem - f_elem;
         push_int(sub);
-
-        printf("sub\n");
     }else if(i == MUL){
 
         int f_elem = pop_int();
         int s_elem = pop_int();
         int mul = f_elem * s_elem;
         push_int(mul);
-
-        printf("mul\n");
     }else if(i == WRINT){
         int_result = pop_int();
 
-        printf("wrint\n");
     }else if(i == WRCHR){
 
-        printf("wrchr\n");
+
     }else if(i == RDINT) {
         int i;
-        printf("rdint  ");
         scanf("%d", &i);
         push_int(i);
+
     }else if(i == RDCHR){
         char i;
-        printf("rdchr  ");
         scanf("%c", &i);
         push_int(i);
+
     }else if(i == DIV){
         int f_elem = pop_int();
         int s_elem = pop_int();
@@ -181,7 +213,7 @@ void exec(unsigned int IR){
             exit(1);
         }
     }else if(i == HALT){
-            printf(":\thalt\n%d\n",int_result);
+            printf("%d\n",int_result);
     }else{
         printf("Ninja Virtual Machine stopped\n");
     }
@@ -190,17 +222,30 @@ void exec(unsigned int IR){
 void exec_prog(){
     int PC = 0;
     unsigned int IR = prog[PC];
-    while (IR != HALT && PC <= 11){
+    int size = sizeof(prog)/4;
+
+    while (IR != HALT && PC <= size){
         printf("%0*d", (2 - PC / 10), 0);
         printf("%d:\t",PC);
-        exec(IR);
+        print_command(IR);
 
         PC += 1;
         IR = prog[PC];
     }
     printf("%0*d", (2 - PC / 10), 0);
     printf("%d",PC);
+    print_command(HALT);
+
+    PC = 0;
+    IR = prog[PC];
+    while (IR != HALT && PC <= size){
+        exec(IR);
+
+        PC += 1;
+        IR = prog[PC];
+    }
     exec(HALT);
+
 }
 
 
