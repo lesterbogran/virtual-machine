@@ -30,6 +30,14 @@ int int_stack[10];
 int int_pos = 0;
 int int_result = 0;
 
+int instruction_number = 0;
+
+int *global_stack;
+int global_variables_num = 0;
+int global_stack_pos = 0;
+
+int *program;
+
 void vm_stop(){
     printf("Ninja Virtual Machine stopped\n");
     exit(1);
@@ -55,9 +63,51 @@ void version_checking(FILE *file){
 
     fread(&version, 4, 1, file);
     if(version != VERSION){
-        printf("ERROR: file version ist incorrect. NJVM version %d", VERSION);
+        printf("ERROR: file version ist incorrect. NJVM version %d\n", VERSION);
         vm_stop();
     }
+}
+
+void instructions_number_check(FILE * file){
+    unsigned int instructions;
+
+    fread(&instructions, 4, 1, file);
+    if(instructions < 0){
+        printf("ERROR: number of instruction is incorrect %d", instructions);
+        vm_stop();
+    }
+
+    int program_stack [instruction_number];
+    instruction_number = instructions;
+    program = program_stack;
+}
+
+void read_instructions(FILE *file){
+    int i = 0;
+    int instructions_number = 0;
+
+    int read_value;
+
+    while (i < instruction_number){
+        fread(&read_value, 4, 1, file);
+
+        program[instructions_number++] = read_value;
+        i++;
+    }
+}
+
+void global_variables_check(FILE * file){
+    unsigned int globals;
+
+    fread(&globals, 4, 1, file);
+    if(globals < 0){
+        printf("ERROR: number of global variables is incorrect %d", globals);
+        vm_stop();
+    }
+    int stack[globals];
+
+    global_variables_num = globals;
+    global_stack = stack;
 }
 
 int open_file(char * file_name){
@@ -70,10 +120,22 @@ int open_file(char * file_name){
 
         identifiers_format_checking(file);
         version_checking(file);
-        printf("IDis are correct\n");
+        instructions_number_check(file);
+        global_variables_check(file);
+        read_instructions(file);
+
+        for(int i = 0; i < instruction_number; i++){
+            printf("Ox%x ", program[i]);
+        }
+        printf("\n");
+//        global_stack[0] = 10;
+//        printf("%d", global_stack[0]);
+
+        //printf("Num of globals: %d\n", global_variables_num);
 
     }else{
         printf("ERROR: Cannot open file\n");
+        fclose(file);
         vm_stop();
     }
     fclose(file);
