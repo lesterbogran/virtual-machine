@@ -21,12 +21,56 @@
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 
-int prog[11];
+#define VERSION 2
 
+const char format_ids [4] = {'N', 'J', 'B', 'F'};
+
+int prog[11];
 int int_stack[10];
 int int_pos = 0;
 int int_result = 0;
 
+void vm_stop(){
+    printf("Ninja Virtual Machine stopped\n");
+    exit(1);
+}
+
+void check_frist_four_bytes(FILE *file){
+    char c;
+    int pos = 0;
+
+    while (pos < 4){
+        c = fgetc(file);
+
+        if(format_ids[pos] != c){
+            printf("ERROR: format identifiers are false\n");
+            vm_stop();
+        }
+        pos++;
+    }
+}
+
+int open_file(char * file_name){
+    FILE *file;
+
+    file = fopen(file_name, "r");
+
+    if(file != NULL){
+        int version;
+
+        check_frist_four_bytes(file);
+        printf("IDis are correct\n");
+
+    }else{
+        printf("ERROR: Cannot open file\n");
+        vm_stop();
+    }
+    fclose(file);
+}
+
+int read_int_from_file(){
+
+}
 void init_prog1(){
     //PROG1
     int arr [11] = {
@@ -81,15 +125,14 @@ void init_prog3(){
 
 void int_stack_overflow(){
     printf("Error. Stack is full!\n");
-    printf("Ninja Virtual Machine stopped\n");
-    exit(1);
+    vm_stop();
 }
 
 void empty_int_stack(){
     printf("Error. Stack is empty!\n");
-    printf("Ninja Virtual Machine stopped\n");
-    exit(1);
+    vm_stop();
 }
+
 void push_int(int el){
     if(int_pos < 11){
         int_stack[int_pos++] = el;
@@ -245,39 +288,40 @@ void exec_prog(){
         IR = prog[PC];
     }
     exec(HALT);
-
 }
 
-
-int main(int argc, char *argv[]) {
-    printf("Ninja Virtual Machine started\n");
-    if (argc < 1)
-        printf("Error, no program is selected\n");
-    else if (strcmp("--help", argv[1]) == 0) {
-        printf("--prog1\tselect program 1 to execute\n"
-               "--prog2\tselect program 2 to execute\n"
-               "--prog3\tselect program 3 to execute\n"
-               "--version show version and exit\n"
-               "--help show this and exit\n");
-    }else if(strcmp("--version", argv[1]) == 0){
-        printf("Ninja Virtual Machine version 1 \n");
-    }else if(strcmp("--prog1", argv[1]) == 0){
-        init_prog1();
-        exec_prog();
-    }else if(strcmp("--prog2", argv[1]) == 0){
-        init_prog2();
-        exec_prog();
-    }else if(strcmp("--prog3", argv[1]) == 0) {
-        init_prog3();
-        exec_prog();
-    } else{
-        printf("Unknown command line argument '%s'\n", argv[1]);
-        printf("Ninja Virtual Machine stopped\n");
-        exit(1);
-    }
-    printf("Ninja Virtual Machine stopped\n");
-    return 0;
+int main(int argc, char *argv[]){
+    open_file("prog1.bin");
 }
+
+//int main(int argc, char *argv[]) {
+//    printf("Ninja Virtual Machine started\n");
+//    if (argc < 1)
+//        printf("Error, no program is selected\n");
+//    else if (strcmp("--help", argv[1]) == 0) {
+//        printf("--prog1\tselect program 1 to execute\n"
+//               "--prog2\tselect program 2 to execute\n"
+//               "--prog3\tselect program 3 to execute\n"
+//               "--version show version and exit\n"
+//               "--help show this and exit\n");
+//    }else if(strcmp("--version", argv[1]) == 0){
+//        printf("Ninja Virtual Machine version 1 \n");
+//    }else if(strcmp("--prog1", argv[1]) == 0){
+//        init_prog1();
+//        exec_prog();
+//    }else if(strcmp("--prog2", argv[1]) == 0){
+//        init_prog2();
+//        exec_prog();
+//    }else if(strcmp("--prog3", argv[1]) == 0) {
+//        init_prog3();
+//        exec_prog();
+//    } else{
+//        printf("Unknown command line argument '%s'\n", argv[1]);
+//        vm_stop();
+//    }
+//    printf("Ninja Virtual Machine stopped\n");
+//    return 0;
+//}
 
 
 
