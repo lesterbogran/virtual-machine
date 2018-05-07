@@ -35,7 +35,7 @@ void vm_stop(){
     exit(1);
 }
 
-void check_frist_four_bytes(FILE *file){
+void identifiers_format_checking(FILE *file){
     char c;
     int pos = 0;
 
@@ -50,6 +50,16 @@ void check_frist_four_bytes(FILE *file){
     }
 }
 
+void version_checking(FILE *file){
+    unsigned int version;
+
+    fread(&version, 4, 1, file);
+    if(version != VERSION){
+        printf("ERROR: file version ist incorrect. NJVM version %d", VERSION);
+        vm_stop();
+    }
+}
+
 int open_file(char * file_name){
     FILE *file;
 
@@ -58,7 +68,8 @@ int open_file(char * file_name){
     if(file != NULL){
         int version;
 
-        check_frist_four_bytes(file);
+        identifiers_format_checking(file);
+        version_checking(file);
         printf("IDis are correct\n");
 
     }else{
@@ -68,9 +79,6 @@ int open_file(char * file_name){
     fclose(file);
 }
 
-int read_int_from_file(){
-
-}
 void init_prog1(){
     //PROG1
     int arr [11] = {
