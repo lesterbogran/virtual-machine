@@ -25,24 +25,40 @@
 
 const char format_ids [4] = {'N', 'J', 'B', 'F'};
 
-int prog[11];
+unsigned int prog[11];
 int int_stack[10];
 int int_pos = 0;
 int int_result = 0;
-
-int instruction_number = 0;
 
 int *global_stack;
 int global_variables_num = 0;
 int global_stack_pos = 0;
 
-int *program;
+/** array with instructions for VM*/
+unsigned int *program;
+/** number of instructions in program*/
+int instruction_number = 0;
 
+/**
+ * Stopping VM
+ */
 void vm_stop(){
     printf("Ninja Virtual Machine stopped\n");
     exit(1);
 }
 
+/**
+ * Closing file stream
+ * @param file
+ */
+void close_file(FILE *file){
+    fclose(file);
+}
+
+/**
+ * Checking VM identifiers number
+ * @param file
+ */
 void identifiers_format_checking(FILE *file){
     char c;
     int pos = 0;
@@ -52,36 +68,57 @@ void identifiers_format_checking(FILE *file){
 
         if(format_ids[pos] != c){
             printf("ERROR: format identifiers are false\n");
+            close_file(file);
             vm_stop();
         }
+        //printf(":%x", c);
         pos++;
     }
+    printf("\n");
+    //printf("correct\n");
 }
 
+/**
+ * Check VM version
+ * @param file
+ */
 void version_checking(FILE *file){
     unsigned int version;
 
     fread(&version, 4, 1, file);
     if(version != VERSION){
         printf("ERROR: file version ist incorrect. NJVM version %d\n", VERSION);
+        close_file(file);
         vm_stop();
     }
+    //printf(":%x\n", version);
+    //printf("correct\n");
 }
 
+/**
+ * Reading number of instructions for *program
+ * @param file
+ */
 void instructions_number_check(FILE * file){
     unsigned int instructions;
 
     fread(&instructions, 4, 1, file);
     if(instructions < 0){
         printf("ERROR: number of instruction is incorrect %d", instructions);
+        close_file(file);
         vm_stop();
     }
-
-    int program_stack [instruction_number];
+    //allocate memory for instruction
+    program = malloc(instructions * sizeof(int));
     instruction_number = instructions;
-    program = program_stack;
+    //printf(":%x\n", instruction_number);
+    //printf("correct\n");
 }
 
+/**
+ * Reading instructions from bin file
+ * @param file
+ */
 void read_instructions(FILE *file){
     int i = 0;
     int instructions_number = 0;
@@ -90,26 +127,39 @@ void read_instructions(FILE *file){
 
     while (i < instruction_number){
         fread(&read_value, 4, 1, file);
-
-        program[instructions_number++] = read_value;
+        program[instructions_number] = read_value;
+        instructions_number++;
         i++;
     }
+   // printf("correct\n");
 }
 
+/**
+ * Checking number of global variables
+ * @param file
+ */
 void global_variables_check(FILE * file){
     unsigned int globals;
 
     fread(&globals, 4, 1, file);
     if(globals < 0){
         printf("ERROR: number of global variables is incorrect %d", globals);
+        close_file(file);
         vm_stop();
     }
     int stack[globals];
 
     global_variables_num = globals;
     global_stack = stack;
+    //printf(":%x\n", globals);
+    //printf("correct\n");
 }
 
+/**
+ * Opens file
+ * @param file_name
+ * @return
+ */
 int open_file(char * file_name){
     FILE *file;
 
@@ -118,15 +168,17 @@ int open_file(char * file_name){
     if(file != NULL){
         int version;
 
+        //correct
         identifiers_format_checking(file);
+        //correct
         version_checking(file);
+        //correct
         instructions_number_check(file);
+        //correct
         global_variables_check(file);
+        //correct
         read_instructions(file);
 
-        for(int i = 0; i < instruction_number; i++){
-            printf("Ox%x ", program[i]);
-        }
         printf("\n");
 //        global_stack[0] = 10;
 //        printf("%d", global_stack[0]);
