@@ -17,6 +17,8 @@
 #define WRINT 8
 #define RDCHR 9
 #define WRCHR 10
+#define PUSHG 11
+#define POPG 12
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
@@ -30,14 +32,17 @@ int int_stack[10];
 int int_pos = 0;
 int int_result = 0;
 
-int *global_stack;
-int global_variables_num = 0;
-int global_stack_pos = 0;
-
 /** array with instructions for VM*/
 unsigned int *program;
 /** number of instructions in program*/
 int instruction_number = 0;
+
+/** array with global variables */
+int *global_stack;
+/** global stack pointer */
+int global_stack_pointer = 0;
+/** global stack size*/
+int global_stack_size = 0;
 
 /**
  * Stopping VM
@@ -147,10 +152,7 @@ void global_variables_check(FILE * file){
         close_file(file);
         vm_stop();
     }
-    int stack[globals];
-
-    global_variables_num = globals;
-    global_stack = stack;
+    global_stack_size = globals;
     //printf(":%x\n", globals);
     //printf("correct\n");
 }
@@ -170,6 +172,7 @@ int open_file(char * file_name){
 
         //correct
         identifiers_format_checking(file);
+        //printf("correct\n");
         //correct
         version_checking(file);
         //correct
@@ -187,7 +190,6 @@ int open_file(char * file_name){
 
     }else{
         printf("ERROR: Cannot open file\n");
-        fclose(file);
         vm_stop();
     }
     fclose(file);
@@ -279,6 +281,40 @@ int pop_int(){
     return 0;
 }
 
+/**
+ * Creating global stack
+ */
+void create_global_stack(){
+    global_stack = malloc(global_stack_size * sizeof(int));
+}
+
+/**
+ * Pushing global variable onto stack
+ * @param position of the variable in stack
+ */
+void pushg(int position){
+    if(position >= 0 && global_stack_size > position){
+        push_int(global_stack[position]);
+    }else{
+        printf("GlobalStackOutOfBoundsError\n");
+        vm_stop();
+    }
+}
+
+/**
+ * Pushing the last stack element onto global stack
+ * @param position on the global stack
+ */
+void popg(int position){
+    if(position >= 0 && global_stack_size > position){
+        int elem = pop_int();
+        global_stack[position] = elem;
+    }else{
+        printf("GlobalStackOutOfBoundsError\n");
+        vm_stop();
+    }
+}
+
 void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
 
@@ -356,6 +392,24 @@ void exec(unsigned int IR){
     }else if(i == WRCHR){
 
 
+    }else if(i == POPG){
+        int position = IR & 0x00FFFFFF;
+        int to_push = pop_int();
+
+        if(position >= 0 && position < global_stack_size){
+            global_stack[position] = to_push;
+        }else{
+            printf("GlobalStackOutOfBoundsError\n");
+            vm_stop();
+        }
+    }else if(i == PUSHG){
+        if(int_pos < sizeof(int_stack)/ 4) {
+            int to_push = IR & 0x00FFFFFF;
+            push_int(to_push);
+        }else{
+            printf("StackOutOfBoundsError\n");
+            vm_stop();
+        }
     }else if(i == RDINT) {
         int i;
         scanf("%d", &i);
@@ -386,64 +440,51 @@ void exec(unsigned int IR){
 
 void exec_prog(){
     int PC = 0;
-    unsigned int IR = prog[PC];
-    int size = sizeof(prog)/4;
+    unsigned int IR = program[PC];
+    int size = instruction_number;
 
-    while (IR != HALT && PC <= size){
+    while (IR != HALT && PC < size){
         printf("%0*d", (2 - PC / 10), 0);
         printf("%d:\t",PC);
         print_command(IR);
 
         PC += 1;
-        IR = prog[PC];
+        IR = program[PC];
     }
     printf("%0*d", (2 - PC / 10), 0);
     printf("%d",PC);
     print_command(HALT);
 
     PC = 0;
-    IR = prog[PC];
-    while (IR != HALT && PC <= size){
+    IR = program[PC];
+    while (IR != HALT && PC < size){
         exec(IR);
 
         PC += 1;
-        IR = prog[PC];
+        IR = program[PC];
     }
     exec(HALT);
 }
 
-int main(int argc, char *argv[]){
-    open_file("prog1.bin");
+int main(int argc, char *argv[]) {
+    printf("Ninja Virtual Machine started\n");
+    if (argc < 1) {
+        printf("Error, no program is selected\n");
+    }else if (strcmp("--help", argv[1]) == 0) {
+        printf("usage: ./njvm [options] <code file>\n"
+               "--version        show version and exit\n"
+               "--help           show this help and exit\n");
+    }else if(strcmp("--version", argv[1]) == 0){
+        printf("Ninja Virtual Machine version %d \n", VERSION);
+    }else{
+        //printf("%s", argv[1]);
+        //printf("ppp\n");
+        open_file(argv[1]);
+        exec_prog();
+    }
+    printf("Ninja Virtual Machine stopped\n");
+    return 0;
 }
-
-//int main(int argc, char *argv[]) {
-//    printf("Ninja Virtual Machine started\n");
-//    if (argc < 1)
-//        printf("Error, no program is selected\n");
-//    else if (strcmp("--help", argv[1]) == 0) {
-//        printf("--prog1\tselect program 1 to execute\n"
-//               "--prog2\tselect program 2 to execute\n"
-//               "--prog3\tselect program 3 to execute\n"
-//               "--version show version and exit\n"
-//               "--help show this and exit\n");
-//    }else if(strcmp("--version", argv[1]) == 0){
-//        printf("Ninja Virtual Machine version 1 \n");
-//    }else if(strcmp("--prog1", argv[1]) == 0){
-//        init_prog1();
-//        exec_prog();
-//    }else if(strcmp("--prog2", argv[1]) == 0){
-//        init_prog2();
-//        exec_prog();
-//    }else if(strcmp("--prog3", argv[1]) == 0) {
-//        init_prog3();
-//        exec_prog();
-//    } else{
-//        printf("Unknown command line argument '%s'\n", argv[1]);
-//        vm_stop();
-//    }
-//    printf("Ninja Virtual Machine stopped\n");
-//    return 0;
-//}
 
 
 
