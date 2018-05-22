@@ -36,7 +36,7 @@ const char format_ids [4] = {'N', 'J', 'B', 'F'};
 
 //unsigned int prog[11];
 /** Normal stack */
-int int_stack[10];
+int *int_stack;
 /** next free place*/
 int int_pos = 0;
 /** result of calculation*/
@@ -208,6 +208,7 @@ int open_file(char * file_name){
         read_instructions(file);
 
         create_local_stack();
+        
 
         printf("\n");
 //        global_stack[0] = 10;
@@ -341,20 +342,21 @@ void popg(int position){
     }
 }
 
-
-
 /**
  * push local variable
  * @param n
  */
 void push_local(int n){
-     if(LOCAL_STACK_SIZE < fp && fp > -1){
+    // printf("to push: %d\n", n);
+    //bug is because of rsf => fp = -1
+    if(LOCAL_STACK_SIZE > fp && fp > -1){
         local_stack[fp] = n;
         fp++;
-     }else{
+        printf("first elem: %d\n", local_stack[0]);
+    }else{
          printf("LocalStackOverflowError\n");
          vm_stop();
-     }
+    }
 }
 
 /**
@@ -364,7 +366,7 @@ void push_local(int n){
 int pop_local(){
     if(fp > -1 && fp < LOCAL_STACK_SIZE){
         fp--;
-        return local_stack[fp + 1];
+        return local_stack[fp];
     } else{
         printf("LocalStackOutOfBoundsError\n");
         vm_stop();
@@ -376,9 +378,16 @@ int pop_local(){
  * @param n
  */
 void asf(int n){
-    push_local(fp);
+    local_stack[fp] = fp;
+
+    //printf("pushed local: %d\n", n);
+    // printf("fp prev: %d\n", sp);
+    sp++;
     fp = sp;
+    //printf("fp next: %d\n", fp);
+
     sp += n;
+    //printf("sp after asf: %d\n", sp);
 }
 
 /**
@@ -443,6 +452,7 @@ void print_command(unsigned int IR){
                            (to_push | 0xFF000000) : to_push);
     }
 }
+
 void exec(unsigned int IR){
     unsigned int i = IR >> 24;
 
@@ -564,7 +574,7 @@ void exec_prog(){
 }
 
 int main(int argc, char *argv[]) {
-    printf("Ninja Virtual Machine started\n");
+    printf("Ninja Virtual Machine started");
     if (argc < 1) {
         printf("Error, no program is selected\n");
     }else if (strcmp("--help", argv[1]) == 0) {
