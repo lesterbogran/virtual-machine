@@ -19,6 +19,13 @@
 #define WRCHR 10
 #define PUSHG 11
 #define POPG 12
+#define ASF 13
+#define RSF 14
+#define PUSHL 15
+#define POPL 16
+
+#define STACK_SIZE 20
+#define LOCAL_STACK_SIZE 1000
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
@@ -27,9 +34,12 @@
 
 const char format_ids [4] = {'N', 'J', 'B', 'F'};
 
-unsigned int prog[11];
+//unsigned int prog[11];
+/** Normal stack */
 int int_stack[10];
+/** next free place*/
 int int_pos = 0;
+/** result of calculation*/
 int int_result = 0;
 
 /** array with instructions for VM*/
@@ -43,6 +53,14 @@ int *global_stack;
 int global_stack_pointer = 0;
 /** global stack size*/
 int global_stack_size = 0;
+
+
+/** array with local variables */
+int *local_stack;
+/** stack pointer */
+int sp = 0;
+/** frame pointer */
+int fp = 0;
 
 /**
  * Stopping VM
@@ -158,6 +176,13 @@ void global_variables_check(FILE * file){
 }
 
 /**
+ * Allocating memory for local stack
+ */
+void create_local_stack(){
+    local_stack = malloc(LOCAL_STACK_SIZE * sizeof(int));
+}
+
+/**
  * Opens file
  * @param file_name
  * @return
@@ -182,6 +207,8 @@ int open_file(char * file_name){
         //correct
         read_instructions(file);
 
+        create_local_stack();
+
         printf("\n");
 //        global_stack[0] = 10;
 //        printf("%d", global_stack[0]);
@@ -194,58 +221,57 @@ int open_file(char * file_name){
     }
     fclose(file);
 }
-
-void init_prog1(){
-    //PROG1
-    int arr [11] = {
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(3)),
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(4)),
-            ADD<<24,
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(10)),
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(6)),
-            SUB<<24,
-            MUL<<24,
-            WRINT<<24,
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(10)),
-            WRCHR<<24,
-            HALT
-    };
-    for(int i = 0; i < 11; i++){
-        prog[i] = arr[i];
-    }
-}
-void init_prog2(){
-//TODO initialize arrays
-//PROG2
-    int arr [9] = {
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(-2)),
-            RDINT<<24,
-            MUL<<24,
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(3)),
-            ADD<<24,
-            WRINT<<24,
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND('\n')),
-            WRCHR<<24,
-            HALT
-    };
-    for(int i = 0; i < 9; i++){
-        prog[i] = arr[i];
-    }
-}
-void init_prog3(){
-    //PROG3
-    int arr [5] = {
-            RDCHR<<24,
-            WRINT<<24,
-            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND('\n')),
-            WRCHR<<24,
-            HALT
-    };
-
-    for(int i = 0; i < 5; i++){
-        prog[i] = arr[i];
-    }
-}
+//
+//void init_prog1(){
+//    //PROG1
+//    int arr [11] = {
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(3)),
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(4)),
+//            ADD<<24,
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(10)),
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(6)),
+//            SUB<<24,
+//            MUL<<24,
+//            WRINT<<24,
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(10)),
+//            WRCHR<<24,
+//            HALT
+//    };
+//    for(int i = 0; i < 11; i++){
+//        prog[i] = arr[i];
+//    }
+//}
+//void init_prog2(){
+////PROG2
+//    int arr [9] = {
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(-2)),
+//            RDINT<<24,
+//            MUL<<24,
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(3)),
+//            ADD<<24,
+//            WRINT<<24,
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND('\n')),
+//            WRCHR<<24,
+//            HALT
+//    };
+//    for(int i = 0; i < 9; i++){
+//        prog[i] = arr[i];
+//    }
+//}
+//void init_prog3(){
+//    //PROG3
+//    int arr [5] = {
+//            RDCHR<<24,
+//            WRINT<<24,
+//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND('\n')),
+//            WRCHR<<24,
+//            HALT
+//    };
+//
+//    for(int i = 0; i < 5; i++){
+//        prog[i] = arr[i];
+//    }
+//}
 
 void int_stack_overflow(){
     printf("Error. Stack is full!\n");
@@ -315,6 +341,54 @@ void popg(int position){
     }
 }
 
+
+
+/**
+ * push local variable
+ * @param n
+ */
+void push_local(int n){
+     if(LOCAL_STACK_SIZE < fp && fp > -1){
+        local_stack[fp] = n;
+        fp++;
+     }else{
+         printf("LocalStackOverflowError\n");
+         vm_stop();
+     }
+}
+
+/**
+ * pop up first element
+ * @return
+ */
+int pop_local(){
+    if(fp > -1 && fp < LOCAL_STACK_SIZE){
+        fp--;
+        return local_stack[fp + 1];
+    } else{
+        printf("LocalStackOutOfBoundsError\n");
+        vm_stop();
+    }
+}
+
+/**
+ * allocate stack frame
+ * @param n
+ */
+void asf(int n){
+    push_local(fp);
+    fp = sp;
+    sp += n;
+}
+
+/**
+ * release stack frame
+ */
+void rsf(){
+    sp = fp;
+    fp = pop_local();
+}
+
 void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
 
@@ -325,8 +399,7 @@ void print_command(unsigned int IR){
                                  (to_push | 0xFF000000) : to_push);
         }else{
             printf("stack is full\nhalt\n");
-            printf("Ninja Virtual Machine stopped\n");
-            exit(1);
+            vm_stop();
         }
     }else if(i == ADD){
         printf("add\n");
@@ -354,6 +427,18 @@ void print_command(unsigned int IR){
         printf("div \n");
     }else if(i == HALT){
         printf(":\thalt\n");
+    }else if(i == ASF){
+        int to_push = IR & 0x00FFFFFF;
+        printf("asf %d\n", to_push & 0x00800000 ?
+                             (to_push | 0xFF000000) : to_push);
+    }else if(i == RSF){
+        printf("rsf\n");
+    }else if(i == POPL){
+        printf("popl\n");
+    }else if(i == PUSHL){
+        int to_push = IR & 0x00FFFFFF;
+        printf("pushl %d\n", to_push & 0x00800000 ?
+                           (to_push | 0xFF000000) : to_push);
     }
 }
 void exec(unsigned int IR){
@@ -374,6 +459,16 @@ void exec(unsigned int IR){
         int s_elem = pop_int();
         int sum = s_elem + f_elem;
         push_int(sum);
+    }else if(i == ASF){
+        int n = IR & 0x00FFFFFF;
+        asf(n);
+    }else if(i == RSF){
+        rsf();
+    }else if(i == POPL){
+        pop_local();
+    }else if(i == PUSHL){
+        int to_push = IR & 0x00FFFFFF;
+        push_local(to_push);
     }else if(i == SUB){
 
         int f_elem = pop_int();
