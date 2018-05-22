@@ -434,7 +434,9 @@ void print_command(unsigned int IR){
     }else if(i == RSF){
         printf("rsf\n");
     }else if(i == POPL){
-        printf("popl\n");
+        int to_push = IR & 0x00FFFFFF;
+        printf("popl %d\n", to_push & 0x00800000 ?
+                             (to_push | 0xFF000000) : to_push);
     }else if(i == PUSHL){
         int to_push = IR & 0x00FFFFFF;
         printf("pushl %d\n", to_push & 0x00800000 ?
