@@ -68,10 +68,6 @@ int global_stack_pointer = 0;
 /** global stack size*/
 int global_stack_size = 0;
 
-
-/** array with local variables */
-int *local_stack;
-
 /** debug mode flag, 0 by default */
 int debug_mode = 0;
 
@@ -200,7 +196,7 @@ void global_variables_check(FILE * file){
  * Allocating memory for local stack
  */
 void create_stack(){
-    local_stack = malloc(STACK_SIZE * sizeof(int));
+    //local_stack = malloc(STACK_SIZE * sizeof(int));
     int_stack = malloc(int_stack_size * sizeof(int));
 }
 
@@ -550,6 +546,7 @@ void exec(unsigned int IR){
 
         if(position >= 0 && position < global_stack_size){
             global_stack[position] = to_push;
+            global_stack_pointer++;
         }else{
             printf("GlobalStackOutOfBoundsError\n");
             vm_stop();
@@ -664,6 +661,17 @@ void print_prog(){
     }
 }
 
+/** prints values of the global stack */
+void print_global_stack(){
+    int i = 0;
+    while (i < global_stack_pointer){
+        printf("data[%0*d", (2 - i / 10), 0);
+        printf("%d]:\t %d \n",i, global_stack[i]);
+        i++;
+    }
+    printf("      --- end of data ---\n");
+}
+
 void exec_prog(){
     printf("Ninja Virtual Machine started\n");
 
@@ -682,7 +690,13 @@ void exec_prog(){
             do{
                 scanf("%s", input);
                 if (strcmp("inspect", input) == 0){
+                    printf("DEBUG [inspect]: stack, data?\n");
+                    scanf("%s", input);
+                    if(strcmp("data", input) == 0){
+                        print_global_stack();
+                    }else if(strcmp("stack", input) == 0){
 
+                    }
                     break;
                 }else if(strcmp("list", input) == 0){
 
@@ -741,7 +755,7 @@ int main(int argc, char *argv[]) {
 //        exec_prog();
 //    }
 
-    debugging("prog5.bin");
+    debugging("prog8.bin");
     printf("Ninja Virtual Machine stopped\n");
     return 0;
 }
