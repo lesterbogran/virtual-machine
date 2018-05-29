@@ -31,6 +31,10 @@
 #define GT 21
 #define GE 22
 
+#define JMP 23
+#define BRT 24
+#define BRF 25
+
 #define STACK_SIZE 1000
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
@@ -68,6 +72,8 @@ int global_stack_size = 0;
 /** array with local variables */
 int *local_stack;
 
+/** debug mode flag, 0 by default */
+int debug_mode = 0;
 
 /**
  * Stopping VM
@@ -230,7 +236,7 @@ int open_file(char * file_name){
         create_stack();
         
 
-        printf("\n");
+        //printf("\n");
 //        global_stack[0] = 10;
 //        printf("%d", global_stack[0]);
 
@@ -238,10 +244,11 @@ int open_file(char * file_name){
 
     }else{
         printf("ERROR: Cannot open file\n");
+        fclose(file);
         vm_stop();
     }
-    fclose(file);
 }
+
 //
 //void init_prog1(){
 //    //PROG1
@@ -416,14 +423,9 @@ void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
 
     if(i == PUSHC){
-        if(int_pos < sizeof(int_stack)/ 4) {
-            int to_push = IR & 0x00FFFFFF;
-            printf("pushc %d\n", to_push & 0x00800000 ?
-                                 (to_push | 0xFF000000) : to_push);
-        }else{
-            printf("stack is full\nhalt\n");
-            vm_stop();
-        }
+        int to_push = IR & 0x00FFFFFF;
+        printf("pushc %d\n", to_push & 0x00800000 ?
+                             (to_push | 0xFF000000) : to_push);
     }else if(i == ADD){
         printf("add\n");
 
@@ -449,7 +451,7 @@ void print_command(unsigned int IR){
 
         printf("div \n");
     }else if(i == HALT){
-        printf(":\thalt\n");
+        printf("halt\n");
     }else if(i == ASF){
         int to_push = IR & 0x00FFFFFF;
         printf("asf %d\n", to_push & 0x00800000 ?
@@ -484,6 +486,14 @@ void print_command(unsigned int IR){
         printf("gt\n");
     }else if(i == GE){
         printf("ge\n");
+    }else if(i == JMP){
+        int to_push = IR & 0x00FFFFFF;
+        printf("jmp %d\n", to_push & 0x00800000 ?
+                             (to_push | 0xFF000000) : to_push);
+    }else if(i == BRF){
+        printf("brf\n");
+    }else if(i == BRT){
+        printf("brt\n");
     }
 }
 
@@ -629,54 +639,106 @@ void exec(unsigned int IR){
         }else{
             push(0);
         }
+    }else if(i == BRF){
+
+    }else if(i == BRT){
+
     }else{
         printf("Ninja Virtual Machine stopped\n");
     }
 }
 
-void exec_prog(){
+
+void print_prog(){
     int PC = 0;
-    unsigned int IR = program[PC];
+    unsigned int IR;
     int size = instruction_number;
 
     while (IR != HALT && PC < size){
+        IR = program[PC];
         printf("%0*d", (2 - PC / 10), 0);
         printf("%d:\t",PC);
         print_command(IR);
 
         PC += 1;
-        IR = program[PC];
     }
-    printf("%0*d", (2 - PC / 10), 0);
-    printf("%d",PC);
-    print_command(HALT);
+}
 
+void exec_prog(){
 
-    PC = 0;
-    IR = program[PC];
+    int size = instruction_number;
+    int PC = 0;
+    unsigned int IR;
     while (IR != HALT && PC < size){
+        IR = program[PC];
         exec(IR);
 
+        if(debug_mode == 1){
+            printf("%0*d", (2 - PC / 10), 0);
+            printf("%d:\t",PC);
+            print_command(IR);
+
+            printf("DEBUG: inspect, list, breakpoint, step, run, quit?\n");
+            char input[20];
+            do{
+                scanf("%s", input);
+                if (strcmp("inspect", input) == 0){
+
+                    break;
+                }else if(strcmp("list", input) == 0){
+                    print_prog();
+                    printf("        --- end of code ---\n");
+                    PC--;
+                    break;
+                }else if(strcmp("breakpoint", input) == 0){
+
+                    break;
+                }else if(strcmp("step", input) == 0){
+                    break;
+                }else if(strcmp("run", input) == 0){ //ok
+                    debug_mode = 0;
+                    break;
+                }else if(strcmp("quit", input) == 0){ //ok
+                    vm_stop();
+                    break;
+                }
+            }while (1);
+        }
+
         PC += 1;
-        IR = program[PC];
     }
-    exec(HALT);
+    //exec(HALT);
+}
+
+/** debugging */
+void debugging(char *file_name){
+    debug_mode = 1;
+    open_file(file_name);
+    printf("DEBUG: file \'%s\' loaded (code size = %d, data size = %d)\n",
+           file_name, instruction_number, global_stack_size);
+
+    exec_prog();
 }
 
 int main(int argc, char *argv[]) {
     printf("Ninja Virtual Machine started");
-    if (argc < 1) {
-        printf("Error, no program is selected\n");
-    }else if (strcmp("--help", argv[1]) == 0) {
-        printf("usage: ./njvm [options] <code file>\n"
-               "--version        show version and exit\n"
-               "--help           show this help and exit\n");
-    }else if(strcmp("--version", argv[1]) == 0){
-        printf("Ninja Virtual Machine version %d \n", VERSION);
-    }else{
-        open_file(argv[1]);
-        exec_prog();
-    }
+//    if (argc < 1) {
+//        printf("Error, no program is selected\n");
+//    }else if (strcmp("--help", argv[1]) == 0) {
+//        printf("usage: ./njvm [options] <code file>\n"
+//               "--version        show version and exit\n"
+//               "--help           show this help and exit\n"
+//               "--debug          start virtual machine in debug mode\n");
+//    }else if(strcmp("--version", argv[1]) == 0){
+//        printf("Ninja Virtual Machine version %d \n", VERSION);
+//    }else if(strcmp("--debug", argv[1]) == 0){
+//        debugging(argv[2]);
+//    }else{
+//        open_file(argv[1]);
+//        exec_prog();
+//    }
+
+    debugging("prog5.bin");
     printf("Ninja Virtual Machine stopped\n");
     return 0;
 }
