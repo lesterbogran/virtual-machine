@@ -24,8 +24,7 @@
 #define PUSHL 15
 #define POPL 16
 
-#define STACK_SIZE 20
-#define LOCAL_STACK_SIZE 1000
+#define STACK_SIZE 1000
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
@@ -41,6 +40,10 @@ int *int_stack;
 int int_pos = 0;
 /** result of calculation*/
 int int_result = 0;
+/** frame pointer */
+int fp = 0;
+/** normal stack size */
+int const int_stack_size = 10000;
 
 /** array with instructions for VM*/
 unsigned int *program;
@@ -57,10 +60,7 @@ int global_stack_size = 0;
 
 /** array with local variables */
 int *local_stack;
-/** stack pointer */
-int sp = 0;
-/** frame pointer */
-int fp = 0;
+
 
 /**
  * Stopping VM
@@ -158,6 +158,13 @@ void read_instructions(FILE *file){
 }
 
 /**
+ * Creating global stack
+ */
+void create_global_stack(){
+    global_stack = malloc(global_stack_size * sizeof(int));
+}
+
+/**
  * Checking number of global variables
  * @param file
  */
@@ -171,6 +178,7 @@ void global_variables_check(FILE * file){
         vm_stop();
     }
     global_stack_size = globals;
+    create_global_stack();
     //printf(":%x\n", globals);
     //printf("correct\n");
 }
@@ -178,8 +186,9 @@ void global_variables_check(FILE * file){
 /**
  * Allocating memory for local stack
  */
-void create_local_stack(){
-    local_stack = malloc(LOCAL_STACK_SIZE * sizeof(int));
+void create_stack(){
+    local_stack = malloc(STACK_SIZE * sizeof(int));
+    int_stack = malloc(int_stack_size * sizeof(int));
 }
 
 /**
@@ -189,8 +198,12 @@ void create_local_stack(){
  */
 int open_file(char * file_name){
     FILE *file;
+    char example[100];
+    strcpy(example, "/Users/p.rozbytskyi/CLionProjects/ksp_debug/");
+    strcat(example, file_name);
 
-    file = fopen(file_name, "r");
+    file = fopen(example, "r");
+    //identifiers_format_checking(file);
 
     if(file != NULL){
         int version;
@@ -206,8 +219,8 @@ int open_file(char * file_name){
         global_variables_check(file);
         //correct
         read_instructions(file);
-
-        create_local_stack();
+        //correct
+        create_stack();
         
 
         printf("\n");
@@ -274,27 +287,29 @@ int open_file(char * file_name){
 //    }
 //}
 
-void int_stack_overflow(){
+void stack_overflow(){
     printf("Error. Stack is full!\n");
     vm_stop();
 }
 
-void empty_int_stack(){
+void empty_stack(){
     printf("Error. Stack is empty!\n");
     vm_stop();
 }
 
-void push_int(int el){
-    if(int_pos < 11){
+void push(int el){
+    //printf("pushed %d onto %d position\n", el, int_pos);
+    if(int_pos < int_stack_size){
         int_stack[int_pos++] = el;
     } else{
-        int_stack_overflow();
+        stack_overflow();
     }
 }
 
-int pop_int(){
+int pop(){
+    //printf("poped %d from %d position\n", int_stack[int_pos - 1], (int_pos - 1));
     if(int_pos - 1 < 0){
-        empty_int_stack();
+        empty_stack();
     } else {
         int stack_var = int_stack[int_pos - 1];
         int_pos--;
@@ -309,19 +324,12 @@ int pop_int(){
 }
 
 /**
- * Creating global stack
- */
-void create_global_stack(){
-    global_stack = malloc(global_stack_size * sizeof(int));
-}
-
-/**
  * Pushing global variable onto stack
  * @param position of the variable in stack
  */
 void pushg(int position){
     if(position >= 0 && global_stack_size > position){
-        push_int(global_stack[position]);
+        push(global_stack[position]);
     }else{
         printf("GlobalStackOutOfBoundsError\n");
         vm_stop();
@@ -334,7 +342,7 @@ void pushg(int position){
  */
 void popg(int position){
     if(position >= 0 && global_stack_size > position){
-        int elem = pop_int();
+        int elem = pop();
         global_stack[position] = elem;
     }else{
         printf("GlobalStackOutOfBoundsError\n");
@@ -349,28 +357,27 @@ void popg(int position){
 void push_local(int n){
     // printf("to push: %d\n", n);
     //bug is because of rsf => fp = -1
-    if(LOCAL_STACK_SIZE > fp && fp > -1){
-        local_stack[fp] = n;
-        fp++;
-        printf("first elem: %d\n", local_stack[0]);
-    }else{
-         printf("LocalStackOverflowError\n");
-         vm_stop();
-    }
+//    if(STACK_SIZE > fp && fp > -1){
+//        local_stack[fp] = n;
+//        fp++;
+//        printf("first elem: %d\n", local_stack[0]);
+//    }else{
+//         printf("LocalStackOverflowError\n");
+//         vm_stop();
+//    }
+    int to_push = int_stack[fp + n];
+
+    push(to_push);
 }
 
 /**
- * pop up first element
+ * pop up first stack element to n position in local stack
  * @return
  */
-int pop_local(){
-    if(fp > -1 && fp < LOCAL_STACK_SIZE){
-        fp--;
-        return local_stack[fp];
-    } else{
-        printf("LocalStackOutOfBoundsError\n");
-        vm_stop();
-    }
+void pop_local(int n){
+    int poped = pop();
+
+    int_stack[fp + n] = poped;
 }
 
 /**
@@ -378,24 +385,24 @@ int pop_local(){
  * @param n
  */
 void asf(int n){
-    local_stack[fp] = fp;
+    //printf("position before asf: %d\n",int_pos);
+    push(fp);
 
-    //printf("pushed local: %d\n", n);
-    // printf("fp prev: %d\n", sp);
-    sp++;
-    fp = sp;
-    //printf("fp next: %d\n", fp);
+    int_pos++;
+    fp = int_pos;
 
-    sp += n;
-    //printf("sp after asf: %d\n", sp);
+    int_pos += n;
+    //printf("position after asf: %d\n",int_pos);
 }
 
 /**
  * release stack frame
  */
 void rsf(){
-    sp = fp;
-    fp = pop_local();
+    //printf("position before rsf: %d\n",int_pos);
+    int_pos = fp;
+    fp = pop();
+    //printf("position after rsf: %d\n", int_pos);
 }
 
 void print_command(unsigned int IR){
@@ -450,16 +457,26 @@ void print_command(unsigned int IR){
         int to_push = IR & 0x00FFFFFF;
         printf("pushl %d\n", to_push & 0x00800000 ?
                            (to_push | 0xFF000000) : to_push);
+    }else if(i == POPG){
+        int to_push = IR & 0x00FFFFFF;
+        printf("popg %d\n", to_push & 0x00800000 ?
+                             (to_push | 0xFF000000) : to_push);
+    }else if(i == PUSHG){
+        int to_push = IR & 0x00FFFFFF;
+        printf("pushg %d\n", to_push & 0x00800000 ?
+                             (to_push | 0xFF000000) : to_push);
     }
+
+
 }
 
 void exec(unsigned int IR){
     unsigned int i = IR >> 24;
 
     if(i == PUSHC){
-        if(int_pos < sizeof(int_stack)/ 4) {
+        if(int_pos < int_stack_size) {
             int to_push = IR & 0x00FFFFFF;
-            push_int(to_push);
+            push(to_push);
         }else{
             printf("stack is full\nhalt\n");
             printf("Ninja Virtual Machine stopped\n");
@@ -467,41 +484,42 @@ void exec(unsigned int IR){
         }
     }else if(i == ADD){
 
-        int f_elem = pop_int();
-        int s_elem = pop_int();
+        int f_elem = pop();
+        int s_elem = pop();
         int sum = s_elem + f_elem;
-        push_int(sum);
+        push(sum);
     }else if(i == ASF){
         int n = IR & 0x00FFFFFF;
         asf(n);
     }else if(i == RSF){
         rsf();
     }else if(i == POPL){
-        pop_local();
+        int to_push = IR & 0x00FFFFFF;
+        pop_local(to_push);
     }else if(i == PUSHL){
         int to_push = IR & 0x00FFFFFF;
         push_local(to_push);
     }else if(i == SUB){
 
-        int f_elem = pop_int();
-        int s_elem = pop_int();
+        int f_elem = pop();
+        int s_elem = pop();
         int sub = s_elem - f_elem;
-        push_int(sub);
+        push(sub);
     }else if(i == MUL){
 
-        int f_elem = pop_int();
-        int s_elem = pop_int();
+        int f_elem = pop();
+        int s_elem = pop();
         int mul = f_elem * s_elem;
-        push_int(mul);
+        push(mul);
     }else if(i == WRINT){
-        int_result = pop_int();
+        int_result = pop();
 
     }else if(i == WRCHR){
 
 
     }else if(i == POPG){
         int position = IR & 0x00FFFFFF;
-        int to_push = pop_int();
+        int to_push = pop();
 
         if(position >= 0 && position < global_stack_size){
             global_stack[position] = to_push;
@@ -512,7 +530,7 @@ void exec(unsigned int IR){
     }else if(i == PUSHG){
         if(int_pos < sizeof(int_stack)/ 4) {
             int to_push = IR & 0x00FFFFFF;
-            push_int(to_push);
+            push(global_stack[to_push]);
         }else{
             printf("StackOutOfBoundsError\n");
             vm_stop();
@@ -520,19 +538,19 @@ void exec(unsigned int IR){
     }else if(i == RDINT) {
         int i;
         scanf("%d", &i);
-        push_int(i);
+        push(i);
 
     }else if(i == RDCHR){
         char i;
         scanf("%c", &i);
-        push_int(i);
+        push(i);
 
     }else if(i == DIV){
-        int f_elem = pop_int();
-        int s_elem = pop_int();
+        int f_elem = pop();
+        int s_elem = pop();
         if(f_elem != 0){
             int mul = f_elem * s_elem;
-            push_int(mul);
+            push(mul);
         }else{
             printf("Divide by zero Error!\n");
             printf("Ninja Virtual Machine stopped\n");
@@ -562,6 +580,7 @@ void exec_prog(){
     printf("%d",PC);
     print_command(HALT);
 
+
     PC = 0;
     IR = program[PC];
     while (IR != HALT && PC < size){
@@ -584,8 +603,6 @@ int main(int argc, char *argv[]) {
     }else if(strcmp("--version", argv[1]) == 0){
         printf("Ninja Virtual Machine version %d \n", VERSION);
     }else{
-        //printf("%s", argv[1]);
-        //printf("ppp\n");
         open_file(argv[1]);
         exec_prog();
     }
