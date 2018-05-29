@@ -651,7 +651,7 @@ void exec(unsigned int IR){
 
 void print_prog(){
     int PC = 0;
-    unsigned int IR;
+    unsigned int IR = 1;
     int size = instruction_number;
 
     while (IR != HALT && PC < size){
@@ -665,19 +665,18 @@ void print_prog(){
 }
 
 void exec_prog(){
+    printf("Ninja Virtual Machine started\n");
 
     int size = instruction_number;
     int PC = 0;
     unsigned int IR;
     while (IR != HALT && PC < size){
         IR = program[PC];
-        exec(IR);
+        printf("%0*d", (2 - PC / 10), 0);
+        printf("%d:\t",PC);
+        print_command(IR);
 
         if(debug_mode == 1){
-            printf("%0*d", (2 - PC / 10), 0);
-            printf("%d:\t",PC);
-            print_command(IR);
-
             printf("DEBUG: inspect, list, breakpoint, step, run, quit?\n");
             char input[20];
             do{
@@ -686,6 +685,7 @@ void exec_prog(){
 
                     break;
                 }else if(strcmp("list", input) == 0){
+
                     print_prog();
                     printf("        --- end of code ---\n");
                     PC--;
@@ -693,16 +693,20 @@ void exec_prog(){
                 }else if(strcmp("breakpoint", input) == 0){
 
                     break;
-                }else if(strcmp("step", input) == 0){
+                }else if(strcmp("step", input) == 0){ //ok
+                    exec(IR);
                     break;
                 }else if(strcmp("run", input) == 0){ //ok
                     debug_mode = 0;
+                    exec(IR);
                     break;
                 }else if(strcmp("quit", input) == 0){ //ok
                     vm_stop();
                     break;
                 }
             }while (1);
+        }else{
+            exec(IR);
         }
 
         PC += 1;
@@ -721,7 +725,6 @@ void debugging(char *file_name){
 }
 
 int main(int argc, char *argv[]) {
-    printf("Ninja Virtual Machine started");
 //    if (argc < 1) {
 //        printf("Error, no program is selected\n");
 //    }else if (strcmp("--help", argv[1]) == 0) {
