@@ -24,12 +24,19 @@
 #define PUSHL 15
 #define POPL 16
 
+#define EQ 17
+#define NE 18
+#define LT 19
+#define LE 20
+#define GT 21
+#define GE 22
+
 #define STACK_SIZE 1000
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 
-#define VERSION 2
+#define VERSION 3
 
 const char format_ids [4] = {'N', 'J', 'B', 'F'};
 
@@ -465,9 +472,19 @@ void print_command(unsigned int IR){
         int to_push = IR & 0x00FFFFFF;
         printf("pushg %d\n", to_push & 0x00800000 ?
                              (to_push | 0xFF000000) : to_push);
+    }else if(i == EQ){
+        printf("eq\n");
+    }else if(i == NE){
+        printf("ne\n");
+    }else if(i == LT){
+        printf("lt\n");
+    }else if(i == LE){
+        printf("le\n");
+    }else if(i == GT){
+        printf("gt\n");
+    }else if(i == GE){
+        printf("ge\n");
     }
-
-
 }
 
 void exec(unsigned int IR){
@@ -557,7 +574,61 @@ void exec(unsigned int IR){
             exit(1);
         }
     }else if(i == HALT){
-            printf("%d\n",int_result);
+            printf("%d\n", int_result);
+    }else if(i == EQ){
+        int first_pop = pop();
+        int second_pop = pop();
+
+        if(first_pop == second_pop){
+            push(1);
+        }else{
+            push(0);
+        }
+    }else if(i == NE){
+        int first_pop = pop();
+        int second_pop = pop();
+
+        if(first_pop != second_pop){
+            push(1);
+        }else{
+            push(0);
+        }
+    }else if(i == LT){
+        int first_pop = pop();
+        int second_pop = pop();
+
+        if(first_pop < second_pop){
+            push(1);
+        }else{
+            push(0);
+        }
+    }else if(i == LE){
+        int first_pop = pop();
+        int second_pop = pop();
+
+        if(first_pop <= second_pop){
+            push(1);
+        }else{
+            push(0);
+        }
+    }else if(i == GT){
+        int first_pop = pop();
+        int second_pop = pop();
+
+        if(first_pop > second_pop){
+            push(1);
+        }else{
+            push(0);
+        }
+    }else if(i == GE){
+        int first_pop = pop();
+        int second_pop = pop();
+
+        if(first_pop >= second_pop){
+            push(1);
+        }else{
+            push(0);
+        }
     }else{
         printf("Ninja Virtual Machine stopped\n");
     }
