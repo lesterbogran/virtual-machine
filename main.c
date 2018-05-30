@@ -672,6 +672,37 @@ void print_global_stack(){
     printf("      --- end of data ---\n");
 }
 
+/** prints state of stack */
+void print_stack_state(){
+    int SP = int_pos;
+    int FP = fp;
+
+    printf("sp         ---> ");
+    printf("%0*d", (2 -  SP/ 10), 0);
+    printf("%d:\t xxxx \n",SP);
+    SP--;
+
+    while (SP > FP){
+        printf("        \t%0*d", (2 -  SP/ 10), 0);
+        printf("%d:\t %d \n", SP, int_stack[SP]);
+
+        SP--;
+    }
+
+    printf("fp         ---> ");
+    printf("%0*d", (2 -  FP/ 10), 0);
+    printf("%d:\t %d \n", FP, int_stack[FP]);
+
+    while (FP > 0){
+        printf("        \t%0*d", (2 -  FP/ 10), 0);
+        printf("%d:\t %d \n", FP, int_stack[FP]);
+
+        FP--;
+    }
+
+    printf("    --- bottom of stack ---\n");
+}
+
 void exec_prog(){
     printf("Ninja Virtual Machine started\n");
 
@@ -694,8 +725,10 @@ void exec_prog(){
                     scanf("%s", input);
                     if(strcmp("data", input) == 0){
                         print_global_stack();
+                        PC--;
                     }else if(strcmp("stack", input) == 0){
-
+                        print_stack_state();
+                        PC--;
                     }
                     break;
                 }else if(strcmp("list", input) == 0){
@@ -717,6 +750,8 @@ void exec_prog(){
                 }else if(strcmp("quit", input) == 0){ //ok
                     vm_stop();
                     break;
+                } else{
+                    PC--;
                 }
             }while (1);
         }else{
