@@ -650,24 +650,24 @@ void print_stack_state(){
 
     printf("sp         ---> ");
     printf("%0*d", (2 -  SP/ 10), 0);
-    printf("%d:\t xxxx \n",SP);
+    printf("%d:\t xxxx \n",SP - 1);
     SP--;
 
     while (SP > FP){
         printf("        \t%0*d", (2 -  SP/ 10), 0);
-        printf("%d:\t %d \n", SP, int_stack[SP]);
+        printf("%d:\t %d \n", SP - 1, int_stack[SP]);
 
         SP--;
     }
 
     printf("fp         ---> ");
     printf("%0*d", (2 -  FP/ 10), 0);
-    printf("%d:\t %d \n", FP, int_stack[FP]);
+    printf("%d:\t %d \n", FP - 1, int_stack[FP]);
     FP--;
 
     while (FP > 0){
         printf("        \t%0*d", (2 -  FP/ 10), 0);
-        printf("%d:\t %d \n", FP, int_stack[FP]);
+        printf("%d:\t %d \n", FP - 1, int_stack[FP]);
 
         FP--;
     }
