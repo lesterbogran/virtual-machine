@@ -35,7 +35,6 @@
 #define BRT 24
 #define BRF 25
 
-#define STACK_SIZE 1000
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
@@ -44,7 +43,6 @@
 
 const char format_ids [4] = {'N', 'J', 'B', 'F'};
 
-//unsigned int prog[11];
 /** Normal stack */
 int *int_stack;
 /** next free place*/
@@ -70,6 +68,10 @@ int global_stack_size = 0;
 
 /** debug mode flag, 0 by default */
 int debug_mode = 0;
+/** breakpoint mode */
+int breakpoint_mode = 0;
+/** instruction number breakpoint */
+int breakpoint_instruction_number = -1;
 
 /**
  * Stopping VM
@@ -710,15 +712,26 @@ void exec_prog(){
     unsigned int IR;
     while (IR != HALT && PC < size){
         IR = program[PC];
-        printf("%0*d", (2 - PC / 10), 0);
-        printf("%d:\t",PC);
-        print_command(IR);
+
+        if(debug_mode != 0){
+            printf("%0*d", (2 - PC / 10), 0);
+            printf("%d:\t",PC);
+            print_command(IR);
+        }
+
+        if(debug_mode == 0 && PC == breakpoint_instruction_number){
+            debug_mode = 1;
+        }
 
         if(debug_mode == 1){
             printf("DEBUG: inspect, list, breakpoint, step, run, quit?\n");
             char input[20];
             do{
                 scanf("%s", input);
+                if(strcmp("\n", input) == 0){
+                    PC--;
+                    break;
+                }
                 if (strcmp("inspect", input) == 0){
                     printf("DEBUG [inspect]: stack, data?\n");
                     scanf("%s", input);
@@ -737,22 +750,45 @@ void exec_prog(){
                     PC--;
                     break;
                 }else if(strcmp("breakpoint", input) == 0){
-                    //TODO: Implement brakepoints and checking input from user
-                    //TODO: program crashes sometimes while user typing incorrect command
+                    //TODO: Implement brakepoints and checking input from user //IMPLEMENTED
+                    //TODO: program crashes sometimes while user typing incorrect command//FIXED
+                    int instruction = -1;
+
+                    //debug_mode = 0;
+                    printf("DEBUG [breakpoint]: cleared\nDEBUG [breakpoint]: address to set, -1 to clear, <ret> for no change?\n");
+                    scanf("%d", &instruction);
+
+                    breakpoint_instruction_number = instruction;
+                    printf("DEBUG [breakpoint]: cleared\n");
+
+                    if(breakpoint_instruction_number > 0) {
+                        printf("DEBUG [breakpoint]: now set at %d\n", breakpoint_instruction_number);
+                        breakpoint_mode = 1;
+                    }
+                    PC--;
                     break;
                 }else if(strcmp("step", input) == 0){ //ok
                     exec(IR);
                     break;
                 }else if(strcmp("run", input) == 0){ //ok
+
+                    if(breakpoint_mode == 1){
+                        printf("%0*d", (2 - breakpoint_instruction_number / 10), 0);
+                        printf("%d:\t",breakpoint_instruction_number);
+                        print_command(program[breakpoint_instruction_number]);
+                        breakpoint_mode = 0;
+                    }
+
                     debug_mode = 0;
                     exec(IR);
                     break;
-                }else if(strcmp("quit", input) == 0){ //ok
+                }else if(strcmp("quit", input) == 0) { //ok
                     vm_stop();
                     break;
-                } else{
-                    PC--;
                 }
+//                } else{
+//                    PC--;
+//                }
             }while (1);
         }else{
             exec(IR);
