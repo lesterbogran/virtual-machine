@@ -32,9 +32,8 @@
 #define GE 22
 
 #define JMP 23
-#define BRT 24
-#define BRF 25
-
+#define BRF 24
+#define BRT 25
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
@@ -73,6 +72,9 @@ int breakpoint_mode = 0;
 /** instruction number breakpoint */
 int breakpoint_instruction_number = -1;
 
+/** Program counter */
+int ProgramCounter = 0;
+
 /**
  * Stopping VM
  */
@@ -105,11 +107,8 @@ void identifiers_format_checking(FILE *file){
             close_file(file);
             vm_stop();
         }
-        //printf(":%x", c);
         pos++;
     }
-    printf("\n");
-    //printf("correct\n");
 }
 
 /**
@@ -125,8 +124,6 @@ void version_checking(FILE *file){
         close_file(file);
         vm_stop();
     }
-    //printf(":%x\n", version);
-    //printf("correct\n");
 }
 
 /**
@@ -145,8 +142,6 @@ void instructions_number_check(FILE * file){
     //allocate memory for instruction
     program = malloc(instructions * sizeof(int));
     instruction_number = instructions;
-    //printf(":%x\n", instruction_number);
-    //printf("correct\n");
 }
 
 /**
@@ -165,7 +160,6 @@ void read_instructions(FILE *file){
         instructions_number++;
         i++;
     }
-   // printf("correct\n");
 }
 
 /**
@@ -173,6 +167,13 @@ void read_instructions(FILE *file){
  */
 void create_global_stack(){
     global_stack = malloc(global_stack_size * sizeof(int));
+
+    int i = 0;
+
+    while (i < global_stack_size){
+        global_stack[i] = 0;
+        i++;
+    }
 }
 
 /**
@@ -190,15 +191,12 @@ void global_variables_check(FILE * file){
     }
     global_stack_size = globals;
     create_global_stack();
-    //printf(":%x\n", globals);
-    //printf("correct\n");
 }
 
 /**
  * Allocating memory for local stack
  */
 void create_stack(){
-    //local_stack = malloc(STACK_SIZE * sizeof(int));
     int_stack = malloc(int_stack_size * sizeof(int));
 }
 
@@ -214,32 +212,16 @@ int open_file(char * file_name){
     strcat(example, file_name);
 
     file = fopen(example, "r");
-    //identifiers_format_checking(file);
 
     if(file != NULL){
         int version;
 
-        //correct
         identifiers_format_checking(file);
-        //printf("correct\n");
-        //correct
         version_checking(file);
-        //correct
         instructions_number_check(file);
-        //correct
         global_variables_check(file);
-        //correct
         read_instructions(file);
-        //correct
         create_stack();
-        
-
-        //printf("\n");
-//        global_stack[0] = 10;
-//        printf("%d", global_stack[0]);
-
-        //printf("Num of globals: %d\n", global_variables_num);
-
     }else{
         printf("ERROR: Cannot open file\n");
         fclose(file);
@@ -268,7 +250,7 @@ int open_file(char * file_name){
 //    }
 //}
 //void init_prog2(){
-////PROG2
+//PROG2
 //    int arr [9] = {
 //            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(-2)),
 //            RDINT<<24,
@@ -319,7 +301,7 @@ void push(int el){
 }
 
 int pop(){
-    if(int_pos - 1 < 0){
+    if(int_pos < 0){
         empty_stack();
     } else {
         int stack_var = int_stack[int_pos - 1];
@@ -366,16 +348,6 @@ void popg(int position){
  * @param n
  */
 void push_local(int n){
-    // printf("to push: %d\n", n);
-    //bug is because of rsf => fp = -1
-//    if(STACK_SIZE > fp && fp > -1){
-//        local_stack[fp] = n;
-//        fp++;
-//        printf("first elem: %d\n", local_stack[0]);
-//    }else{
-//         printf("LocalStackOverflowError\n");
-//         vm_stop();
-//    }
     int to_push = int_stack[fp + n];
 
     push(to_push);
@@ -396,33 +368,28 @@ void pop_local(int n){
  * @param n
  */
 void asf(int n){
-    //printf("position before asf: %d\n",int_pos);
     push(fp);
 
     int_pos++;
     fp = int_pos;
 
     int_pos += n;
-    //printf("position after asf: %d\n",int_pos);
 }
 
 /**
  * release stack frame
  */
 void rsf(){
-    //printf("position before rsf: %d\n",int_pos);
     int_pos = fp;
     fp = pop();
-    //printf("position after rsf: %d\n", int_pos);
 }
 
 void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
 
     if(i == PUSHC){
-        int to_push = IR & 0x00FFFFFF;
-        printf("pushc %d\n", to_push & 0x00800000 ?
-                             (to_push | 0xFF000000) : to_push);
+        int to_push = IMMEDIATE(IR);
+        printf("pushc %d\n", SIGN_EXTEND(to_push));
     }else if(i == ADD){
         printf("add\n");
 
@@ -450,27 +417,22 @@ void print_command(unsigned int IR){
     }else if(i == HALT){
         printf("halt\n");
     }else if(i == ASF){
-        int to_push = IR & 0x00FFFFFF;
-        printf("asf %d\n", to_push & 0x00800000 ?
-                             (to_push | 0xFF000000) : to_push);
+        int to_push = IMMEDIATE(IR);
+        printf("asf %d\n", SIGN_EXTEND(to_push));
     }else if(i == RSF){
         printf("rsf\n");
     }else if(i == POPL){
-        int to_push = IR & 0x00FFFFFF;
-        printf("popl %d\n", to_push & 0x00800000 ?
-                             (to_push | 0xFF000000) : to_push);
+        int to_push = IMMEDIATE(IR);
+        printf("popl %d\n", SIGN_EXTEND(to_push));
     }else if(i == PUSHL){
-        int to_push = IR & 0x00FFFFFF;
-        printf("pushl %d\n", to_push & 0x00800000 ?
-                           (to_push | 0xFF000000) : to_push);
+        int to_push = IMMEDIATE(IR);
+        printf("pushl %d\n", SIGN_EXTEND(to_push));
     }else if(i == POPG){
-        int to_push = IR & 0x00FFFFFF;
-        printf("popg %d\n", to_push & 0x00800000 ?
-                             (to_push | 0xFF000000) : to_push);
+        int to_push = IMMEDIATE(IR);
+        printf("popg %d\n", SIGN_EXTEND(to_push));
     }else if(i == PUSHG){
-        int to_push = IR & 0x00FFFFFF;
-        printf("pushg %d\n", to_push & 0x00800000 ?
-                             (to_push | 0xFF000000) : to_push);
+        int to_push = IMMEDIATE(IR);
+        printf("pushg %d\n", SIGN_EXTEND(to_push));
     }else if(i == EQ){
         printf("eq\n");
     }else if(i == NE){
@@ -484,13 +446,11 @@ void print_command(unsigned int IR){
     }else if(i == GE){
         printf("ge\n");
     }else if(i == JMP){
-        int to_push = IR & 0x00FFFFFF;
-        printf("jmp %d\n", to_push & 0x00800000 ?
-                             (to_push | 0xFF000000) : to_push);
+        printf("jmp %d\n", IMMEDIATE(IR));
     }else if(i == BRF){
-        printf("brf\n");
+        printf("brf %d\n", IMMEDIATE(IR));
     }else if(i == BRT){
-        printf("brt\n");
+        printf("brt %d\n", IMMEDIATE(IR));
     }
 }
 
@@ -499,7 +459,7 @@ void exec(unsigned int IR){
 
     if(i == PUSHC){
         if(int_pos < int_stack_size) {
-            int to_push = IR & 0x00FFFFFF;
+            int to_push = IMMEDIATE(IR);
             push(to_push);
         }else{
             printf("stack is full\nhalt\n");
@@ -513,15 +473,15 @@ void exec(unsigned int IR){
         int sum = s_elem + f_elem;
         push(sum);
     }else if(i == ASF){
-        int n = IR & 0x00FFFFFF;
+        int n = IMMEDIATE(IR);
         asf(n);
     }else if(i == RSF){
         rsf();
     }else if(i == POPL){
-        int to_push = IR & 0x00FFFFFF;
+        int to_push = IMMEDIATE(IR);
         pop_local(to_push);
     }else if(i == PUSHL){
-        int to_push = IR & 0x00FFFFFF;
+        int to_push = IMMEDIATE(IR);
         push_local(to_push);
     }else if(i == SUB){
 
@@ -537,12 +497,10 @@ void exec(unsigned int IR){
         push(mul);
     }else if(i == WRINT){
         int_result = pop();
-
     }else if(i == WRCHR){
 
-
     }else if(i == POPG){
-        int position = IR & 0x00FFFFFF;
+        int position = IMMEDIATE(IR);
         int to_push = pop();
 
         if(position >= 0 && position < global_stack_size){
@@ -554,7 +512,7 @@ void exec(unsigned int IR){
         }
     }else if(i == PUSHG){
         if(int_pos < sizeof(int_stack)/ 4) {
-            int to_push = IR & 0x00FFFFFF;
+            int to_push = IMMEDIATE(IR);
             push(global_stack[to_push]);
         }else{
             printf("StackOutOfBoundsError\n");
@@ -623,7 +581,7 @@ void exec(unsigned int IR){
         int first_pop = pop();
         int second_pop = pop();
 
-        if(first_pop > second_pop){
+        if(first_pop < second_pop){
             push(1);
         }else{
             push(0);
@@ -638,9 +596,21 @@ void exec(unsigned int IR){
             push(0);
         }
     }else if(i == BRF){
+        int poped = pop();
 
+        if(poped == 0){
+            int value = IMMEDIATE(IR);
+            ProgramCounter = value;
+        }
     }else if(i == BRT){
+        int poped = pop();
 
+        if(poped == 1){
+            int value = IMMEDIATE(IR);
+            ProgramCounter = value;
+        }
+    }else if(i == JMP){
+        ProgramCounter = IMMEDIATE(IR);
     }else{
         printf("Ninja Virtual Machine stopped\n");
     }
@@ -665,7 +635,7 @@ void print_prog(){
 /** prints values of the global stack */
 void print_global_stack(){
     int i = 0;
-    while (i < global_stack_pointer){
+    while (i < global_stack_size){
         printf("data[%0*d", (2 - i / 10), 0);
         printf("%d]:\t %d \n",i, global_stack[i]);
         i++;
@@ -693,6 +663,7 @@ void print_stack_state(){
     printf("fp         ---> ");
     printf("%0*d", (2 -  FP/ 10), 0);
     printf("%d:\t %d \n", FP, int_stack[FP]);
+    FP--;
 
     while (FP > 0){
         printf("        \t%0*d", (2 -  FP/ 10), 0);
@@ -708,18 +679,18 @@ void exec_prog(){
     printf("Ninja Virtual Machine started\n");
 
     int size = instruction_number;
-    int PC = 0;
+    ProgramCounter = 0;
     unsigned int IR;
-    while (IR != HALT && PC < size){
-        IR = program[PC];
+    while (IR != HALT && ProgramCounter < size){
+        IR = program[ProgramCounter];
 
         if(debug_mode != 0){
-            printf("%0*d", (2 - PC / 10), 0);
-            printf("%d:\t",PC);
+            printf("%0*d", (2 - ProgramCounter / 10), 0);
+            printf("%d:\t",ProgramCounter);
             print_command(IR);
         }
 
-        if(debug_mode == 0 && PC == breakpoint_instruction_number){
+        if(debug_mode == 0 && ProgramCounter == breakpoint_instruction_number){
             debug_mode = 1;
         }
 
@@ -729,7 +700,7 @@ void exec_prog(){
             do{
                 scanf("%s", input);
                 if(strcmp("\n", input) == 0){
-                    PC--;
+                    ProgramCounter--;
                     break;
                 }
                 if (strcmp("inspect", input) == 0){
@@ -737,24 +708,21 @@ void exec_prog(){
                     scanf("%s", input);
                     if(strcmp("data", input) == 0){
                         print_global_stack();
-                        PC--;
+                        ProgramCounter--;
                     }else if(strcmp("stack", input) == 0){
                         print_stack_state();
-                        PC--;
+                        ProgramCounter--;
                     }
                     break;
                 }else if(strcmp("list", input) == 0){
 
                     print_prog();
                     printf("        --- end of code ---\n");
-                    PC--;
+                    ProgramCounter--;
                     break;
                 }else if(strcmp("breakpoint", input) == 0){
-                    //TODO: Implement brakepoints and checking input from user //IMPLEMENTED
-                    //TODO: program crashes sometimes while user typing incorrect command//FIXED
                     int instruction = -1;
 
-                    //debug_mode = 0;
                     printf("DEBUG [breakpoint]: cleared\nDEBUG [breakpoint]: address to set, -1 to clear, <ret> for no change?\n");
                     scanf("%d", &instruction);
 
@@ -765,7 +733,7 @@ void exec_prog(){
                         printf("DEBUG [breakpoint]: now set at %d\n", breakpoint_instruction_number);
                         breakpoint_mode = 1;
                     }
-                    PC--;
+                    ProgramCounter--;
                     break;
                 }else if(strcmp("step", input) == 0){ //ok
                     exec(IR);
@@ -786,17 +754,12 @@ void exec_prog(){
                     vm_stop();
                     break;
                 }
-//                } else{
-//                    PC--;
-//                }
             }while (1);
         }else{
             exec(IR);
         }
-
-        PC += 1;
+        ProgramCounter += 1;
     }
-    //exec(HALT);
 }
 
 /** debugging */
@@ -810,23 +773,22 @@ void debugging(char *file_name){
 }
 
 int main(int argc, char *argv[]) {
-//    if (argc < 1) {
-//        printf("Error, no program is selected\n");
-//    }else if (strcmp("--help", argv[1]) == 0) {
-//        printf("usage: ./njvm [options] <code file>\n"
-//               "--version        show version and exit\n"
-//               "--help           show this help and exit\n"
-//               "--debug          start virtual machine in debug mode\n");
-//    }else if(strcmp("--version", argv[1]) == 0){
-//        printf("Ninja Virtual Machine version %d \n", VERSION);
-//    }else if(strcmp("--debug", argv[1]) == 0){
-//        debugging(argv[2]);
-//    }else{
-//        open_file(argv[1]);
-//        exec_prog();
-//    }
+    if (argc < 1) {
+        printf("Error, no program is selected\n");
+    }else if (strcmp("--help", argv[1]) == 0) {
+        printf("usage: ./njvm [options] <code file>\n"
+               "--version        show version and exit\n"
+               "--help           show this help and exit\n"
+               "--debug          start virtual machine in debug mode\n");
+    }else if(strcmp("--version", argv[1]) == 0){
+        printf("Ninja Virtual Machine version %d \n", VERSION);
+    }else if(strcmp("--debug", argv[1]) == 0){
+        debugging(argv[2]);
+    }else{
+        open_file(argv[1]);
+        exec_prog();
+    }
 
-    debugging("prog8.bin");
     printf("Ninja Virtual Machine stopped\n");
     return 0;
 }
