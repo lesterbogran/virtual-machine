@@ -317,7 +317,6 @@ void push(int el){
 }
 
 int pop(){
-    //printf("poped %d from %d position\n", int_stack[int_pos - 1], (int_pos - 1));
     if(int_pos - 1 < 0){
         empty_stack();
     } else {
@@ -738,7 +737,8 @@ void exec_prog(){
                     PC--;
                     break;
                 }else if(strcmp("breakpoint", input) == 0){
-
+                    //TODO: Implement brakepoints and checking input from user
+                    //TODO: program crashes sometimes while user typing incorrect command
                     break;
                 }else if(strcmp("step", input) == 0){ //ok
                     exec(IR);
