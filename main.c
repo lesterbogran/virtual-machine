@@ -230,10 +230,11 @@ void create_return_register(){
 int open_file(char * file_name){
     FILE *file;
     char example[100];
-    strcpy(example, "/Users/p.rozbytskyi/CLionProjects/ksp_debug/");
-    strcat(example, file_name);
+    // for debugging
+//    strcpy(example, "/Users/p.rozbytskyi/CLionProjects/ksp_debug/");
+//    strcat(example, file_name);
 
-    file = fopen(example, "r");
+    file = fopen(file_name, "r");
 
     if(file != NULL){
         int version;
@@ -263,7 +264,6 @@ void empty_stack(){
 }
 
 void push(int el){
-    //printf("pushed %d onto %d position\n", el, int_pos);
     if(int_pos < int_stack_size){
         int_stack[int_pos++] = el;
     } else{
@@ -535,11 +535,11 @@ void exec(unsigned int IR){
     }else if(i == WRINT){
         int_result = pop();
 
-        printf("%d\n", int_result);
+        printf("%d", int_result);
     }else if(i == WRCHR){
         int_result = pop();
 
-        printf("%c\n", int_result);
+        printf("%c", int_result);
     }else if(i == POPG){
         int position = IMMEDIATE(IR);
         int to_push = pop();
@@ -778,11 +778,16 @@ void exec_prog(){
                     if(strcmp("data", input) == 0){
                         print_global_stack();
                         ProgramCounter--;
+                        break;
                     }else if(strcmp("stack", input) == 0){
                         print_stack_state();
                         ProgramCounter--;
+                        break;
+                    }else{
+                        ProgramCounter--;
+                        break;
                     }
-                    break;
+
                 }else if(strcmp("list", input) == 0){
 
                     print_prog();
@@ -841,30 +846,24 @@ void debugging(char *file_name){
     exec_prog();
 }
 
-//int main(int argc, char *argv[]) {
-//    if (argc < 1) {
-//        printf("Error, no program is selected\n");
-//    }else if (strcmp("--help", argv[1]) == 0) {
-//        printf("usage: ./njvm [options] <code file>\n"
-//               "--version        show version and exit\n"
-//               "--help           show this help and exit\n"
-//               "--debug          start virtual machine in debug mode\n");
-//    }else if(strcmp("--version", argv[1]) == 0){
-//        printf("Ninja Virtual Machine version %d \n", VERSION);
-//    }else if(strcmp("--debug", argv[1]) == 0){
-//        debugging(argv[2]);
-//    }else{
-//        open_file(argv[1]);
-//        exec_prog();
-//    }
-//
-//    printf("Ninja Virtual Machine stopped\n");
-//    return 0;
-//}
+int main(int argc, char *argv[]) {
+    if (argc < 1) {
+        printf("Error, no program is selected\n");
+    }else if (strcmp("--help", argv[1]) == 0) {
+        printf("usage: ./njvm [options] <code file>\n"
+               "--version        show version and exit\n"
+               "--help           show this help and exit\n"
+               "--debug          start virtual machine in debug mode\n");
+    }else if(strcmp("--version", argv[1]) == 0){
+        printf("Ninja Virtual Machine version %d \n", VERSION);
+    }else if(strcmp("--debug", argv[1]) == 0){
+        debugging(argv[2]);
+    }else{
+        open_file(argv[1]);
+        exec_prog();
+    }
 
-int main(int argc, char *argv[]){
-    debugging("prog4.bin");
-
+    printf("Ninja Virtual Machine stopped\n");
     return 0;
 }
 
