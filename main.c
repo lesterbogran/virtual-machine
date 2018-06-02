@@ -470,6 +470,16 @@ void jump(int pos){
     ProgramCounter = pos - 1;
 }
 
+/** function removes n last elements from stack */
+void drop(int n){
+    int i = 0;
+
+    while (i < n){
+        pop();
+        i++;
+    }
+}
+
 void exec(unsigned int IR){
     unsigned int i = IR >> 24;
 
@@ -644,6 +654,8 @@ void exec(unsigned int IR){
         jump(next_instruction);
     }else if(i == DROP){
         //printf("drop %d\n", IMMEDIATE(IR));
+        int to_drop = IMMEDIATE(IR);
+        drop(to_drop);
     }else if(i == PUSHR){
         //printf("pushr \n");
     }else if(i == DUP){
@@ -827,7 +839,7 @@ void debugging(char *file_name){
 //}
 
 int main(int argc, char *argv[]){
-    debugging("prog2.bin");
+    debugging("prog1.bin");
 
     return 0;
 }
