@@ -413,8 +413,9 @@ void print_command(unsigned int IR){
 
         printf("rdchr \n");
     }else if(i == DIV){
-
         printf("div \n");
+    }else if(i == MOD){
+        printf("mod \n");
     }else if(i == HALT){
         printf("halt\n");
     }else if(i == ASF){
@@ -561,16 +562,28 @@ void exec(unsigned int IR){
     }else if(i == DIV){
         int f_elem = pop();
         int s_elem = pop();
-        if(f_elem != 0){
-            int mul = f_elem * s_elem;
-            push(mul);
+        if(s_elem != 0){
+            int div = f_elem / s_elem;
+            push(div);
         }else{
             printf("Divide by zero Error!\n");
             printf("Ninja Virtual Machine stopped\n");
             exit(1);
         }
-    }else if(i == HALT){
-            printf("%d\n", int_result);
+    }else if(i == MOD){
+        int f_elem = pop();
+        int s_elem = pop();
+        if(s_elem != 0){
+            int div = f_elem % s_elem;
+            push(div);
+        }else{
+            printf("Divide by zero Error!\n");
+            printf("Ninja Virtual Machine stopped\n");
+            exit(1);
+        }
+    }
+    else if(i == HALT){
+            // stop vm
     }else if(i == EQ){
         int first_pop = pop();
         int second_pop = pop();
@@ -643,17 +656,13 @@ void exec(unsigned int IR){
         int next_instruction = ProgramCounter + 1;
         //pushing next instruction on stack
         push(next_instruction);
-        //loading values from stack onto return register
-        //push_onto_return_register();
         //jump to the function
         jump(IMMEDIATE(IR));
     }else if(i == RET){
         //loading adress from return register onto to of stack
-        //pop_from_return_register();
         int next_instruction = pop();
         jump(next_instruction);
     }else if(i == DROP){
-        //printf("drop %d\n", IMMEDIATE(IR));
         int to_drop = IMMEDIATE(IR);
         drop(to_drop);
     }else if(i == PUSHR){
