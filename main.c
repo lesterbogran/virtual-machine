@@ -35,10 +35,18 @@
 #define BRF 24
 #define BRT 25
 
+#define CALL 26
+#define RET 27
+#define DROP 28
+#define PUSHR 29
+#define POPR 30
+
+#define DUP 31
+
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 
-#define VERSION 3
+#define VERSION 4
 
 const char format_ids [4] = {'N', 'J', 'B', 'F'};
 
@@ -52,6 +60,13 @@ int int_result = 0;
 int fp = 0;
 /** normal stack size */
 int const int_stack_size = 10000;
+
+/** return register size */
+int const return_register_size = 100;
+/** return register position */
+int return_register_pos = 0;
+/** return register */
+int *return_register;
 
 /** array with instructions for VM*/
 unsigned int *program;
@@ -201,6 +216,13 @@ void create_stack(){
 }
 
 /**
+ * Allocating memory for return register
+ */
+void create_return_register(){
+    return_register = malloc(return_register_size * sizeof(int));
+}
+
+/**
  * Opens file
  * @param file_name
  * @return
@@ -222,64 +244,13 @@ int open_file(char * file_name){
         global_variables_check(file);
         read_instructions(file);
         create_stack();
+        create_return_register();
     }else{
         printf("ERROR: Cannot open file\n");
         fclose(file);
         vm_stop();
     }
 }
-
-//
-//void init_prog1(){
-//    //PROG1
-//    int arr [11] = {
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(3)),
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(4)),
-//            ADD<<24,
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(10)),
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(6)),
-//            SUB<<24,
-//            MUL<<24,
-//            WRINT<<24,
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(10)),
-//            WRCHR<<24,
-//            HALT
-//    };
-//    for(int i = 0; i < 11; i++){
-//        prog[i] = arr[i];
-//    }
-//}
-//void init_prog2(){
-//PROG2
-//    int arr [9] = {
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(-2)),
-//            RDINT<<24,
-//            MUL<<24,
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND(3)),
-//            ADD<<24,
-//            WRINT<<24,
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND('\n')),
-//            WRCHR<<24,
-//            HALT
-//    };
-//    for(int i = 0; i < 9; i++){
-//        prog[i] = arr[i];
-//    }
-//}
-//void init_prog3(){
-//    //PROG3
-//    int arr [5] = {
-//            RDCHR<<24,
-//            WRINT<<24,
-//            (PUSHC<<24)|IMMEDIATE(SIGN_EXTEND('\n')),
-//            WRCHR<<24,
-//            HALT
-//    };
-//
-//    for(int i = 0; i < 5; i++){
-//        prog[i] = arr[i];
-//    }
-//}
 
 void stack_overflow(){
     printf("Error. Stack is full!\n");
@@ -368,11 +339,13 @@ void pop_local(int n){
  * @param n
  */
 void asf(int n){
-    push(fp);
-
-    int_pos++;
-    fp = int_pos;
-
+    if(int_pos == 0){
+        push(fp);
+        fp++;
+    }else {
+        push(fp);
+        fp = int_pos;
+    }
     int_pos += n;
 }
 
@@ -383,6 +356,34 @@ void rsf(){
     int_pos = fp;
     fp = pop();
 }
+
+
+///**
+// * pushing top of stack onto return register
+// */
+//void push_onto_return_register(){
+//    int to_push = pop();
+//
+//    if(return_register_pos < return_register_size){
+//        return_register[return_register_pos++] = to_push;
+//    }else{
+//        printf("RuntimeError: reached maximum recursion depth\n");
+//        vm_stop();
+//    }
+//}
+//
+///**
+// * poping adress from the return register onto top of stack
+// */
+//void pop_from_return_register(){
+//    if(return_register_pos > 0){
+//        int to_push = return_register[return_register_pos - 1];
+//        push(to_push);
+//    } else{
+//        printf("RuntimeError: return register is empty\n");
+//        vm_stop();
+//    }
+//}
 
 void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
@@ -451,7 +452,22 @@ void print_command(unsigned int IR){
         printf("brf %d\n", IMMEDIATE(IR));
     }else if(i == BRT){
         printf("brt %d\n", IMMEDIATE(IR));
+    }else if(i == CALL){
+        printf("call %d\n", IMMEDIATE(IR));
+    }else if(i == RET){
+        printf("ret \n");
+    }else if(i == DROP){
+        printf("drop %d\n", IMMEDIATE(IR));
+    }else if(i == PUSHR){
+        printf("pushr \n");
+    }else if(i == DUP){
+        printf("dup \n");
     }
+}
+
+/** jumping to this position */
+void jump(int pos){
+    ProgramCounter = pos - 1;
 }
 
 void exec(unsigned int IR){
@@ -479,10 +495,10 @@ void exec(unsigned int IR){
         rsf();
     }else if(i == POPL){
         int to_push = IMMEDIATE(IR);
-        pop_local(to_push);
+        pop_local(SIGN_EXTEND(to_push));
     }else if(i == PUSHL){
         int to_push = IMMEDIATE(IR);
-        push_local(to_push);
+        push_local(SIGN_EXTEND(to_push));
     }else if(i == SUB){
 
         int f_elem = pop();
@@ -497,8 +513,12 @@ void exec(unsigned int IR){
         push(mul);
     }else if(i == WRINT){
         int_result = pop();
-    }else if(i == WRCHR){
 
+        printf("%d\n", int_result);
+    }else if(i == WRCHR){
+        int_result = pop();
+
+        printf("%c\n", int_result);
     }else if(i == POPG){
         int position = IMMEDIATE(IR);
         int to_push = pop();
@@ -599,20 +619,37 @@ void exec(unsigned int IR){
         int poped = pop();
 
         if(poped == 0){
-            int value = IMMEDIATE(IR);
-            ProgramCounter = value;
+            jump(IMMEDIATE(IR));
         }
     }else if(i == BRT){
         int poped = pop();
 
         if(poped == 1){
-            int value = IMMEDIATE(IR);
-            ProgramCounter = value;
+            jump(IMMEDIATE(IR));
         }
     }else if(i == JMP){
-        ProgramCounter = IMMEDIATE(IR);
+        jump(IMMEDIATE(IR));
+    }else if(i == CALL){
+        int next_instruction = ProgramCounter + 1;
+        //pushing next instruction on stack
+        push(next_instruction);
+        //loading values from stack onto return register
+        //push_onto_return_register();
+        //jump to the function
+        jump(IMMEDIATE(IR));
+    }else if(i == RET){
+        //loading adress from return register onto to of stack
+        //pop_from_return_register();
+        int next_instruction = pop();
+        jump(next_instruction);
+    }else if(i == DROP){
+        //printf("drop %d\n", IMMEDIATE(IR));
+    }else if(i == PUSHR){
+        //printf("pushr \n");
+    }else if(i == DUP){
+        //printf("dup \n");
     }else{
-        printf("Ninja Virtual Machine stopped\n");
+        //printf("Ninja Virtual Machine stopped\n");
     }
 }
 
@@ -622,7 +659,7 @@ void print_prog(){
     unsigned int IR = 1;
     int size = instruction_number;
 
-    while (IR != HALT && PC < size){
+    while (PC < size){
         IR = program[PC];
         printf("%0*d", (2 - PC / 10), 0);
         printf("%d:\t",PC);
@@ -643,33 +680,29 @@ void print_global_stack(){
     printf("      --- end of data ---\n");
 }
 
-/** prints state of stack */
+/** fucking foobar function prints stack state. 2 fucking hours debugging */
 void print_stack_state(){
     int SP = int_pos;
     int FP = fp;
 
     printf("sp         ---> ");
     printf("%0*d", (2 -  SP/ 10), 0);
-    printf("%d:\t xxxx \n",SP - 1);
-    SP--;
+    printf("%d:\t xxxx \n",SP);
 
-    while (SP > FP){
-        printf("        \t%0*d", (2 -  SP/ 10), 0);
-        printf("%d:\t %d \n", SP - 1, int_stack[SP]);
-
+    while (SP > FP + 1){
         SP--;
+        printf("        \t%0*d", (2 -  SP/ 10), 0);
+        printf("%d:\t %d \n", SP, int_stack[SP]);
     }
 
     printf("fp         ---> ");
     printf("%0*d", (2 -  FP/ 10), 0);
-    printf("%d:\t %d \n", FP - 1, int_stack[FP]);
-    FP--;
+    printf("%d:\t %d \n", FP, int_stack[FP]);
 
     while (FP > 0){
-        printf("        \t%0*d", (2 -  FP/ 10), 0);
-        printf("%d:\t %d \n", FP - 1, int_stack[FP]);
-
         FP--;
+        printf("        \t%0*d", (2 -  FP/ 10), 0);
+        printf("%d:\t %d \n", FP, int_stack[FP]);
     }
 
     printf("    --- bottom of stack ---\n");
@@ -772,24 +805,30 @@ void debugging(char *file_name){
     exec_prog();
 }
 
-int main(int argc, char *argv[]) {
-    if (argc < 1) {
-        printf("Error, no program is selected\n");
-    }else if (strcmp("--help", argv[1]) == 0) {
-        printf("usage: ./njvm [options] <code file>\n"
-               "--version        show version and exit\n"
-               "--help           show this help and exit\n"
-               "--debug          start virtual machine in debug mode\n");
-    }else if(strcmp("--version", argv[1]) == 0){
-        printf("Ninja Virtual Machine version %d \n", VERSION);
-    }else if(strcmp("--debug", argv[1]) == 0){
-        debugging(argv[2]);
-    }else{
-        open_file(argv[1]);
-        exec_prog();
-    }
+//int main(int argc, char *argv[]) {
+//    if (argc < 1) {
+//        printf("Error, no program is selected\n");
+//    }else if (strcmp("--help", argv[1]) == 0) {
+//        printf("usage: ./njvm [options] <code file>\n"
+//               "--version        show version and exit\n"
+//               "--help           show this help and exit\n"
+//               "--debug          start virtual machine in debug mode\n");
+//    }else if(strcmp("--version", argv[1]) == 0){
+//        printf("Ninja Virtual Machine version %d \n", VERSION);
+//    }else if(strcmp("--debug", argv[1]) == 0){
+//        debugging(argv[2]);
+//    }else{
+//        open_file(argv[1]);
+//        exec_prog();
+//    }
+//
+//    printf("Ninja Virtual Machine stopped\n");
+//    return 0;
+//}
 
-    printf("Ninja Virtual Machine stopped\n");
+int main(int argc, char *argv[]){
+    debugging("prog2.bin");
+
     return 0;
 }
 
