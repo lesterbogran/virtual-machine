@@ -358,32 +358,32 @@ void rsf(){
 }
 
 
-///**
-// * pushing top of stack onto return register
-// */
-//void push_onto_return_register(){
-//    int to_push = pop();
-//
-//    if(return_register_pos < return_register_size){
-//        return_register[return_register_pos++] = to_push;
-//    }else{
-//        printf("RuntimeError: reached maximum recursion depth\n");
-//        vm_stop();
-//    }
-//}
-//
-///**
-// * poping adress from the return register onto top of stack
-// */
-//void pop_from_return_register(){
-//    if(return_register_pos > 0){
-//        int to_push = return_register[return_register_pos - 1];
-//        push(to_push);
-//    } else{
-//        printf("RuntimeError: return register is empty\n");
-//        vm_stop();
-//    }
-//}
+/**
+ * pushing top of stack onto return register
+ */
+void popr(){
+    int to_push = pop();
+
+    if(return_register_pos < return_register_size){
+        return_register[return_register_pos++] = to_push;
+    }else{
+        printf("RuntimeError: reached maximum recursion depth\n");
+        vm_stop();
+    }
+}
+
+/**
+ * poping adress from the return register onto top of stack
+ */
+void pushr(){
+    if(return_register_pos > 0){
+        int to_push = return_register[return_register_pos - 1];
+        push(to_push);
+    } else{
+        printf("RuntimeError: return register is empty\n");
+        vm_stop();
+    }
+}
 
 void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
@@ -461,6 +461,8 @@ void print_command(unsigned int IR){
         printf("drop %d\n", IMMEDIATE(IR));
     }else if(i == PUSHR){
         printf("pushr \n");
+    }else if(i == POPR){
+        printf("popr \n");
     }else if(i == DUP){
         printf("dup \n");
     }
@@ -479,6 +481,14 @@ void drop(int n){
         pop();
         i++;
     }
+}
+
+/** duplicates top of stack */
+void duplicate(){
+    int to_duplicate = pop();
+
+    push(to_duplicate);
+    push(to_duplicate);
 }
 
 void exec(unsigned int IR){
@@ -666,9 +676,11 @@ void exec(unsigned int IR){
         int to_drop = IMMEDIATE(IR);
         drop(to_drop);
     }else if(i == PUSHR){
-        //printf("pushr \n");
+        pushr();
+    }else if(i == POPR){
+        popr();
     }else if(i == DUP){
-        //printf("dup \n");
+        duplicate();
     }else{
         //printf("Ninja Virtual Machine stopped\n");
     }
@@ -706,26 +718,29 @@ void print_stack_state(){
     int SP = int_pos;
     int FP = fp;
 
-    printf("sp         ---> ");
-    printf("%0*d", (2 -  SP/ 10), 0);
-    printf("%d:\t xxxx \n",SP);
+    if(SP != 0 || FP != 0) {
+        printf("sp         ---> ");
+        printf("%0*d", (2 - SP / 10), 0);
+        printf("%d:\t xxxx \n", SP);
 
-    while (SP > FP + 1){
-        SP--;
-        printf("        \t%0*d", (2 -  SP/ 10), 0);
-        printf("%d:\t %d \n", SP, int_stack[SP]);
-    }
+        while (SP > FP + 1) {
+            SP--;
+            printf("        \t%0*d", (2 - SP / 10), 0);
+            printf("%d:\t %d \n", SP, int_stack[SP]);
+        }
 
-    printf("fp         ---> ");
-    printf("%0*d", (2 -  FP/ 10), 0);
-    printf("%d:\t %d \n", FP, int_stack[FP]);
-
-    while (FP > 0){
-        FP--;
-        printf("        \t%0*d", (2 -  FP/ 10), 0);
+        printf("fp         ---> ");
+        printf("%0*d", (2 - FP / 10), 0);
         printf("%d:\t %d \n", FP, int_stack[FP]);
-    }
 
+        while (FP > 0) {
+            FP--;
+            printf("        \t%0*d", (2 - FP / 10), 0);
+            printf("%d:\t %d \n", FP, int_stack[FP]);
+        }
+    }else{
+        printf("sp, fp --->     000:   xxxx\n");
+    }
     printf("    --- bottom of stack ---\n");
 }
 
@@ -848,7 +863,7 @@ void debugging(char *file_name){
 //}
 
 int main(int argc, char *argv[]){
-    debugging("prog1.bin");
+    debugging("prog4.bin");
 
     return 0;
 }
