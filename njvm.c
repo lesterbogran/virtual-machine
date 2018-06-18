@@ -568,23 +568,21 @@ void exec(unsigned int IR){
     }else if(i == DIV){
         int f_elem = pop();
         int s_elem = pop();
-        if(s_elem != 0){
-            int div = f_elem / s_elem;
+        if(f_elem != 0){
+            int div = s_elem / f_elem;
             push(div);
         }else{
-            printf("Divide by zero Error!\n");
-            printf("Ninja Virtual Machine stopped\n");
+            printf("Error: division by zero \n");
             exit(1);
         }
     }else if(i == MOD){
         int f_elem = pop();
         int s_elem = pop();
-        if(s_elem != 0){
-            int div = f_elem % s_elem;
+        if(f_elem != 0){
+            int div = s_elem % f_elem;
             push(div);
         }else{
-            printf("Divide by zero Error!\n");
-            printf("Ninja Virtual Machine stopped\n");
+            printf("Error: division by zero\n");
             exit(1);
         }
     }
@@ -612,7 +610,7 @@ void exec(unsigned int IR){
         int first_pop = pop();
         int second_pop = pop();
 
-        if(first_pop < second_pop){
+        if(second_pop < first_pop){
             push(1);
         }else{
             push(0);
@@ -621,7 +619,7 @@ void exec(unsigned int IR){
         int first_pop = pop();
         int second_pop = pop();
 
-        if(first_pop <= second_pop){
+        if(second_pop <= first_pop){
             push(1);
         }else{
             push(0);
@@ -630,7 +628,7 @@ void exec(unsigned int IR){
         int first_pop = pop();
         int second_pop = pop();
 
-        if(first_pop < second_pop){
+        if(second_pop > first_pop){
             push(1);
         }else{
             push(0);
@@ -639,7 +637,7 @@ void exec(unsigned int IR){
         int first_pop = pop();
         int second_pop = pop();
 
-        if(first_pop >= second_pop){
+        if(second_pop >= first_pop){
             push(1);
         }else{
             push(0);
@@ -872,8 +870,4 @@ int main(int argc, char *argv[]) {
     }
     return 0;
 }
-
-
-
-
 
