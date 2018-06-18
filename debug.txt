@@ -1,0 +1,9 @@
+mit --debug Option kann man euer Program debuggen
+
+Zurzeit stehen folgende Debug funktionen: 
+1) [step] - zur naechsten Instruktion gehen 
+2) [list] - alle Instruktionen des Programms anzeigen 
+3) [run] - program bis zu Ende ausfuehren 
+4) [quit] - Program beenden 
+5)[breakpoint] - breakpoint auf <Number> Instruktion setzen, bei der 
+Eingabe von <-1> wird breakpoint zurueckgesetzt

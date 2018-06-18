@@ -135,9 +135,9 @@ void version_checking(FILE *file){
 
     fread(&version, 4, 1, file);
     if(version != VERSION){
-        printf("ERROR: file version ist incorrect. NJVM version %d\n", VERSION);
+        printf("Error: file has wrong version number \n");
         close_file(file);
-        vm_stop();
+        exit(1);
     }
 }
 
@@ -229,16 +229,10 @@ void create_return_register(){
  */
 int open_file(char * file_name){
     FILE *file;
-    char example[100];
-    // for debugging
-//    strcpy(example, "/Users/p.rozbytskyi/CLionProjects/ksp_debug/");
-//    strcat(example, file_name);
 
     file = fopen(file_name, "r");
 
     if(file != NULL){
-        int version;
-
         identifiers_format_checking(file);
         version_checking(file);
         instructions_number_check(file);
@@ -247,10 +241,12 @@ int open_file(char * file_name){
         create_stack();
         create_return_register();
     }else{
-        printf("ERROR: Cannot open file\n");
-        fclose(file);
-        vm_stop();
+        printf("Error: no code file specified\n");
+        //fclose(file);
+        exit(1);
     }
+    printf("Ninja Virtual Machine started\n");
+    return 0;
 }
 
 void stack_overflow(){
@@ -593,7 +589,7 @@ void exec(unsigned int IR){
         }
     }
     else if(i == HALT){
-            // stop vm
+        // stop vm
     }else if(i == EQ){
         int first_pop = pop();
         int second_pop = pop();
@@ -694,7 +690,7 @@ void print_prog(){
 
     while (PC < size){
         IR = program[PC];
-        printf("%0*d", (2 - PC / 10), 0);
+        printf("%0*d", 3 - PC/10 , 0);
         printf("%d:\t",PC);
         print_command(IR);
 
@@ -745,11 +741,11 @@ void print_stack_state(){
 }
 
 void exec_prog(){
-    printf("Ninja Virtual Machine started\n");
+    //printf("Ninja Virtual Machine started\n");
 
     int size = instruction_number;
     ProgramCounter = 0;
-    unsigned int IR;
+    unsigned int IR = -1;
     while (IR != HALT && ProgramCounter < size){
         IR = program[ProgramCounter];
 
@@ -847,23 +843,33 @@ void debugging(char *file_name){
 }
 
 int main(int argc, char *argv[]) {
-    if (argc < 1) {
-        printf("Error, no program is selected\n");
-    }else if (strcmp("--help", argv[1]) == 0) {
-        printf("usage: ./njvm [options] <code file>\n"
-               "--version        show version and exit\n"
-               "--help           show this help and exit\n"
-               "--debug          start virtual machine in debug mode\n");
-    }else if(strcmp("--version", argv[1]) == 0){
-        printf("Ninja Virtual Machine version %d \n", VERSION);
-    }else if(strcmp("--debug", argv[1]) == 0){
-        debugging(argv[2]);
+    if (argv[1] == NULL) {
+        printf("Error: no code file specified\n");
     }else{
-        open_file(argv[1]);
-        exec_prog();
+        if (strcmp("--help", argv[1]) == 0) {
+            printf("usage: ./njvm [options] <code file>\n"
+                   "--version        show version and exit\n"
+                   "--help           show this help and exit\n"
+                   "--debug          start virtual machine in debug mode\n");
+        }else if(strcmp("--version", argv[1]) == 0){
+            printf("Ninja Virtual Machine version %d \n", VERSION);
+        }else if(strcmp("--debug", argv[1]) == 0){
+            if(argv[2] != NULL){
+                debugging(argv[2]);
+                printf("Ninja Virtual Machine stopped\n");
+            }else{
+                printf("ERROR: Cannot open file\n");
+            }
+        }else{
+            if(argv[1] != NULL){
+                open_file(argv[1]);
+                exec_prog();
+                printf("Ninja Virtual Machine stopped\n");
+            }else{
+                printf("ERROR: Cannot open file\n");
+            }
+        }
     }
-
-    printf("Ninja Virtual Machine stopped\n");
     return 0;
 }
 
