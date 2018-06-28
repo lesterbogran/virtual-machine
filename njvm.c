@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <mach/machine.h>
+#include <stdbool.h>
 
 #define HALT 0
 #define PUSHC 1
@@ -46,7 +48,27 @@
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 
-#define VERSION 4
+#define VERSION 5
+#define STACK_SIZE 10000
+#define NULL 0
+
+typedef struct{
+    unsigned int size;
+    unsigned char data[1];
+} *ObjRef;
+
+typedef struct {
+    boolean_t isObjRef;
+    union{
+        ObjRef objRef;
+        int number;
+    } u;
+} StackSlot;
+
+/**
+ * Creating version 5 stack with elements from heap
+ */
+StackSlot int_stack_slot[STACK_SIZE];
 
 const char format_ids [4] = {'N', 'J', 'B', 'F'};
 
@@ -66,7 +88,7 @@ int const return_register_size = 100;
 /** return register position */
 int return_register_pos = 0;
 /** return register */
-int *return_register;
+StackSlot *return_register;
 
 /** array with instructions for VM*/
 unsigned int *program;
@@ -75,10 +97,15 @@ int instruction_number = 0;
 
 /** array with global variables */
 int *global_stack;
+
+
+/////////CHANGING GLOBAL STACK
 /** global stack pointer */
 int global_stack_pointer = 0;
 /** global stack size*/
 int global_stack_size = 0;
+/** created global stack for objects */
+StackSlot *global_stack_slot;
 
 /** debug mode flag, 0 by default */
 int debug_mode = 0;
@@ -97,6 +124,25 @@ void vm_stop(){
     printf("Ninja Virtual Machine stopped\n");
     exit(1);
 }
+
+
+StackSlot createStackSlot(int value, boolean_t is_ref){
+    StackSlot stackSlot;
+
+    if(is_ref){
+        ObjRef objRef = malloc(sizeof(unsigned int) + sizeof(int));
+        objRef -> size = sizeof(int);
+        *(int *) objRef -> data = value;
+        stackSlot.isObjRef = true;
+        stackSlot.u.objRef = objRef;
+    }else{
+        stackSlot.isObjRef = false;
+        stackSlot.u.number = value;
+    }
+
+    return stackSlot;
+}
+
 
 /**
  * Closing file stream
@@ -181,14 +227,7 @@ void read_instructions(FILE *file){
  * Creating global stack
  */
 void create_global_stack(){
-    global_stack = malloc(global_stack_size * sizeof(int));
-
-    int i = 0;
-
-    while (i < global_stack_size){
-        global_stack[i] = 0;
-        i++;
-    }
+    global_stack_slot = malloc(global_stack_size * sizeof(int));
 }
 
 /**
@@ -211,9 +250,9 @@ void global_variables_check(FILE * file){
 /**
  * Allocating memory for local stack
  */
-void create_stack(){
-    int_stack = malloc(int_stack_size * sizeof(int));
-}
+//void create_stack(){
+//    int_stack = malloc(int_stack_size * sizeof(int));
+//}
 
 /**
  * Allocating memory for return register
@@ -238,11 +277,10 @@ int open_file(char * file_name){
         instructions_number_check(file);
         global_variables_check(file);
         read_instructions(file);
-        create_stack();
+        //create_stack(); dont need, because is created
         create_return_register();
     }else{
         printf("Error: no code file specified\n");
-        //fclose(file);
         exit(1);
     }
     printf("Ninja Virtual Machine started\n");
@@ -259,28 +297,31 @@ void empty_stack(){
     vm_stop();
 }
 
-void push(int el){
+void push(StackSlot stackSlot){
     if(int_pos < int_stack_size){
-        int_stack[int_pos++] = el;
+        int_stack_slot[int_pos++] = stackSlot;
     } else{
         stack_overflow();
     }
 }
 
-int pop(){
+StackSlot pop(){
     if(int_pos < 0){
         empty_stack();
     } else {
-        int stack_var = int_stack[int_pos - 1];
+        StackSlot stack_var = int_stack_slot[int_pos - 1];
         int_pos--;
-        if (stack_var & 0x00800000) {
-            stack_var |= 0xFF000000;
-            return stack_var;
-        } else {
-            return stack_var;
-        }
+        /** Why i did it??????? foobar*/
+//        if(!stack_var.isObjRef){
+//            if (stack_var.u.number & 0x00800000) {
+//                stack_var.u.number |= 0xFF000000;
+//                return stack_var.u.number;
+//            } else {
+//                return stack_var.u.number;
+//            }
+//        }
+        return stack_var;
     }
-    return 0;
 }
 
 /**
@@ -289,7 +330,7 @@ int pop(){
  */
 void pushg(int position){
     if(position >= 0 && global_stack_size > position){
-        push(global_stack[position]);
+        push(global_stack_slot[position]);
     }else{
         printf("GlobalStackOutOfBoundsError\n");
         vm_stop();
@@ -302,8 +343,8 @@ void pushg(int position){
  */
 void popg(int position){
     if(position >= 0 && global_stack_size > position){
-        int elem = pop();
-        global_stack[position] = elem;
+        StackSlot elem = pop();
+        global_stack_slot[position] = elem;
     }else{
         printf("GlobalStackOutOfBoundsError\n");
         vm_stop();
@@ -315,7 +356,7 @@ void popg(int position){
  * @param n
  */
 void push_local(int n){
-    int to_push = int_stack[fp + n];
+    StackSlot to_push = int_stack_slot[fp + n];
 
     push(to_push);
 }
@@ -325,9 +366,9 @@ void push_local(int n){
  * @return
  */
 void pop_local(int n){
-    int poped = pop();
+    StackSlot poped = pop();
 
-    int_stack[fp + n] = poped;
+    int_stack_slot[fp + n] = poped;
 }
 
 /**
@@ -336,10 +377,10 @@ void pop_local(int n){
  */
 void asf(int n){
     if(int_pos == 0){
-        push(fp);
+        push(createStackSlot(fp, false));
         fp++;
     }else {
-        push(fp);
+        push(createStackSlot(fp, false));
         fp = int_pos;
     }
     int_pos += n;
@@ -350,7 +391,9 @@ void asf(int n){
  */
 void rsf(){
     int_pos = fp;
-    fp = pop();
+
+    StackSlot fp_slot = pop();
+    fp = *(int *)fp_slot.u.objRef->data;
 }
 
 
@@ -358,7 +401,7 @@ void rsf(){
  * pushing top of stack onto return register
  */
 void popr(){
-    int to_push = pop();
+    StackSlot to_push = pop();
 
     if(return_register_pos < return_register_size){
         return_register[return_register_pos++] = to_push;
@@ -373,7 +416,8 @@ void popr(){
  */
 void pushr(){
     if(return_register_pos > 0){
-        int to_push = return_register[return_register_pos - 1];
+        StackSlot to_push = return_register[return_register_pos - 1];
+
         push(to_push);
     } else{
         printf("RuntimeError: return register is empty\n");
@@ -481,10 +525,14 @@ void drop(int n){
 
 /** duplicates top of stack */
 void duplicate(){
-    int to_duplicate = pop();
+    StackSlot to_duplicate = pop();
 
     push(to_duplicate);
     push(to_duplicate);
+}
+
+int get_int_from_ref_slot(StackSlot stackSlot){
+    return * (int *)stackSlot.u.objRef->data;
 }
 
 void exec(unsigned int IR){
@@ -493,18 +541,18 @@ void exec(unsigned int IR){
     if(i == PUSHC){
         if(int_pos < int_stack_size) {
             int to_push = IMMEDIATE(IR);
-            push(to_push);
+            StackSlot stackSlot = createStackSlot(to_push, true);
+            push(stackSlot);
         }else{
             printf("stack is full\nhalt\n");
             printf("Ninja Virtual Machine stopped\n");
             exit(1);
         }
     }else if(i == ADD){
-
-        int f_elem = pop();
-        int s_elem = pop();
-        int sum = s_elem + f_elem;
-        push(sum);
+        StackSlot f_elem = pop();
+        StackSlot s_elem = pop();
+        int sum = get_int_from_ref_slot(s_elem) + get_int_from_ref_slot(f_elem);
+        push(createStackSlot(sum, true));
     }else if(i == ASF){
         int n = IMMEDIATE(IR);
         asf(n);
@@ -517,31 +565,34 @@ void exec(unsigned int IR){
         int to_push = IMMEDIATE(IR);
         push_local(SIGN_EXTEND(to_push));
     }else if(i == SUB){
-
-        int f_elem = pop();
-        int s_elem = pop();
-        int sub = s_elem - f_elem;
-        push(sub);
+        StackSlot f_elem = pop();
+        StackSlot s_elem = pop();
+        int sub = get_int_from_ref_slot(s_elem) - get_int_from_ref_slot(f_elem);
+        push(createStackSlot(sub, true));
     }else if(i == MUL){
-
-        int f_elem = pop();
-        int s_elem = pop();
-        int mul = f_elem * s_elem;
-        push(mul);
+        StackSlot f_elem = pop();
+        StackSlot s_elem = pop();
+        int mul = get_int_from_ref_slot(f_elem) * get_int_from_ref_slot(s_elem);
+        push(createStackSlot(mul, true));
     }else if(i == WRINT){
-        int_result = pop();
-
-        printf("%d", int_result);
+        StackSlot poped = pop();
+        if(!poped.isObjRef){
+            int_result = poped.u.number;
+            printf("%d", int_result);
+        }else{
+            int_result = get_int_from_ref_slot(poped);
+            printf("%p", poped.u.objRef);
+        }
     }else if(i == WRCHR){
-        int_result = pop();
-
+        StackSlot poped = pop();
+        int_result = get_int_from_ref_slot(poped);
         printf("%c", int_result);
     }else if(i == POPG){
         int position = IMMEDIATE(IR);
-        int to_push = pop();
+        StackSlot to_push = pop();
 
         if(position >= 0 && position < global_stack_size){
-            global_stack[position] = to_push;
+            global_stack_slot[position] = to_push;
             global_stack_pointer++;
         }else{
             printf("GlobalStackOutOfBoundsError\n");
@@ -550,7 +601,7 @@ void exec(unsigned int IR){
     }else if(i == PUSHG){
         if(int_pos < sizeof(int_stack)/ 4) {
             int to_push = IMMEDIATE(IR);
-            push(global_stack[to_push]);
+            push(global_stack_slot[to_push]);
         }else{
             printf("StackOutOfBoundsError\n");
             vm_stop();
@@ -558,100 +609,97 @@ void exec(unsigned int IR){
     }else if(i == RDINT) {
         int i;
         scanf("%d", &i);
-        push(i);
-
+        push(createStackSlot(i, true));
     }else if(i == RDCHR){
         char i;
         scanf("%c", &i);
-        push(i);
-
+        push(createStackSlot(i, true));
     }else if(i == DIV){
-        int f_elem = pop();
-        int s_elem = pop();
-        if(f_elem != 0){
-            int div = s_elem / f_elem;
-            push(div);
+        StackSlot f_elem = pop();
+        StackSlot s_elem = pop();
+        if(get_int_from_ref_slot(f_elem) != 0){
+            int div = get_int_from_ref_slot(s_elem) / get_int_from_ref_slot(f_elem);
+            push(createStackSlot(div, true));
         }else{
             printf("Error: division by zero \n");
             exit(1);
         }
     }else if(i == MOD){
-        int f_elem = pop();
-        int s_elem = pop();
-        if(f_elem != 0){
-            int div = s_elem % f_elem;
-            push(div);
+        StackSlot f_elem = pop();
+        StackSlot s_elem = pop();
+        if(get_int_from_ref_slot(f_elem) != 0){
+            int div = get_int_from_ref_slot(s_elem) % get_int_from_ref_slot(f_elem);
+            push(createStackSlot(div, true));
         }else{
             printf("Error: division by zero\n");
             exit(1);
         }
     }
     else if(i == HALT){
-        // stop vm
     }else if(i == EQ){
-        int first_pop = pop();
-        int second_pop = pop();
+        StackSlot first_pop = pop();
+        StackSlot second_pop = pop();
 
-        if(first_pop == second_pop){
-            push(1);
+        if(get_int_from_ref_slot(first_pop) == get_int_from_ref_slot(second_pop)){
+            push(createStackSlot(1, true));
         }else{
-            push(0);
+            push(createStackSlot(0, true));
         }
     }else if(i == NE){
-        int first_pop = pop();
-        int second_pop = pop();
+        StackSlot first_pop = pop();
+        StackSlot second_pop = pop();
 
-        if(first_pop != second_pop){
-            push(1);
+        if(get_int_from_ref_slot(first_pop) != get_int_from_ref_slot(second_pop)){
+            push(createStackSlot(1, true));
         }else{
-            push(0);
+            push(createStackSlot(0, true));
         }
     }else if(i == LT){
-        int first_pop = pop();
-        int second_pop = pop();
+        StackSlot first_pop = pop();
+        StackSlot second_pop = pop();
 
-        if(second_pop < first_pop){
-            push(1);
+        if(get_int_from_ref_slot(second_pop) < get_int_from_ref_slot(first_pop)){
+            push(createStackSlot(1, true));
         }else{
-            push(0);
+            push(createStackSlot(0, true));
         }
     }else if(i == LE){
-        int first_pop = pop();
-        int second_pop = pop();
+        StackSlot first_pop = pop();
+        StackSlot second_pop = pop();
 
-        if(second_pop <= first_pop){
-            push(1);
+        if(get_int_from_ref_slot(second_pop) <= get_int_from_ref_slot(first_pop)){
+            push(createStackSlot(1, true));
         }else{
-            push(0);
+            push(createStackSlot(0, true));
         }
     }else if(i == GT){
-        int first_pop = pop();
-        int second_pop = pop();
+        StackSlot first_pop = pop();
+        StackSlot second_pop = pop();
 
-        if(second_pop > first_pop){
-            push(1);
+        if(get_int_from_ref_slot(second_pop) > get_int_from_ref_slot(first_pop)){
+            push(createStackSlot(1, true));
         }else{
-            push(0);
+            push(createStackSlot(0, true));
         }
     }else if(i == GE){
-        int first_pop = pop();
-        int second_pop = pop();
+        StackSlot first_pop = pop();
+        StackSlot second_pop = pop();
 
-        if(second_pop >= first_pop){
-            push(1);
+        if(get_int_from_ref_slot(second_pop) >= get_int_from_ref_slot(first_pop)){
+            push(createStackSlot(1, false));
         }else{
-            push(0);
+            push(createStackSlot(0, false));
         }
     }else if(i == BRF){
-        int poped = pop();
+        StackSlot poped = pop();
 
-        if(poped == 0){
+        if(get_int_from_ref_slot(poped) == 0){
             jump(IMMEDIATE(IR));
         }
     }else if(i == BRT){
-        int poped = pop();
+        StackSlot poped = pop();
 
-        if(poped == 1){
+        if(get_int_from_ref_slot(poped) == 1){
             jump(IMMEDIATE(IR));
         }
     }else if(i == JMP){
@@ -659,12 +707,13 @@ void exec(unsigned int IR){
     }else if(i == CALL){
         int next_instruction = ProgramCounter + 1;
         //pushing next instruction on stack
-        push(next_instruction);
+        push(createStackSlot(next_instruction, true));
         //jump to the function
         jump(IMMEDIATE(IR));
     }else if(i == RET){
         //loading adress from return register onto to of stack
-        int next_instruction = pop();
+        StackSlot stackSlot = pop();
+        int next_instruction = get_int_from_ref_slot(stackSlot);
         jump(next_instruction);
     }else if(i == DROP){
         int to_drop = IMMEDIATE(IR);
@@ -696,17 +745,31 @@ void print_prog(){
     }
 }
 
+
 /** prints values of the global stack */
 void print_global_stack(){
     int i = 0;
     while (i < global_stack_size){
         printf("data[%0*d", (2 - i / 10), 0);
-        printf("%d]:\t %d \n",i, global_stack[i]);
+        printf("%d]: \t", i);
+        if(global_stack_slot[i].isObjRef != NULL){
+            printf("(objref)");
+            printf(" %p \n", global_stack_slot[i].u.objRef);
+        }else{
+            printf("(nil)\n");
+        }
         i++;
     }
     printf("      --- end of data ---\n");
 }
 
+void print_stack_slot(StackSlot stackSlot, int SP){
+    if(stackSlot.isObjRef){
+        printf("%d:\t (objref) %p \n", SP, stackSlot.u.objRef);
+    }else{
+        printf("%d:\t %d \n", SP, stackSlot.u.number);
+    }
+}
 /** fucking foobar function prints stack state. 2 fucking hours debugging */
 void print_stack_state(){
     int SP = int_pos;
@@ -720,17 +783,19 @@ void print_stack_state(){
         while (SP > FP + 1) {
             SP--;
             printf("        \t%0*d", (2 - SP / 10), 0);
-            printf("%d:\t %d \n", SP, int_stack[SP]);
+            print_stack_slot(global_stack_slot[SP], SP);
         }
 
         printf("fp         ---> ");
         printf("%0*d", (2 - FP / 10), 0);
-        printf("%d:\t %d \n", FP, int_stack[FP]);
+//        printf("%d:\t %d \n", FP, global_stack_slot[FP]);
+        print_stack_slot(global_stack_slot[FP], FP);
 
         while (FP > 0) {
             FP--;
             printf("        \t%0*d", (2 - FP / 10), 0);
-            printf("%d:\t %d \n", FP, int_stack[FP]);
+//            printf("%d:\t %d \n", FP, int_stack[FP]);
+            print_stack_slot(global_stack_slot[FP], FP);
         }
     }else{
         printf("sp, fp --->     000:   xxxx\n");
@@ -767,7 +832,7 @@ void exec_prog(){
                     break;
                 }
                 if (strcmp("inspect", input) == 0){
-                    printf("DEBUG [inspect]: stack, data?\n");
+                    printf("DEBUG [inspect]: stack, data, object?\n");
                     scanf("%s", input);
                     if(strcmp("data", input) == 0){
                         print_global_stack();
@@ -777,6 +842,12 @@ void exec_prog(){
                         print_stack_state();
                         ProgramCounter--;
                         break;
+                    }else if(strcmp("object", input) == 0){
+                        printf("object referene?\n");
+                        scanf("%p", input);
+                        printf("%p your pointer", input); /////// HOW TO READ POINTER
+                        //print_stack_state();
+                        ProgramCounter--;
                     }else{
                         ProgramCounter--;
                         break;
