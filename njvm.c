@@ -576,11 +576,11 @@ void exec(unsigned int IR){
         push(createStackSlot(mul, true));
     }else if(i == WRINT){
         StackSlot poped = pop();
-        if(!poped.isObjRef){
-            int_result = poped.u.number;
+        if(poped.isObjRef){
+            int_result = get_int_from_ref_slot(poped);
             printf("%d", int_result);
         }else{
-            int_result = get_int_from_ref_slot(poped);
+            //int_result = get_int_from_ref_slot(poped);
             printf("%p", poped.u.objRef);
         }
     }else if(i == WRCHR){
@@ -803,9 +803,26 @@ void print_stack_state(){
     printf("    --- bottom of stack ---\n");
 }
 
-void exec_prog(){
-    //printf("Ninja Virtual Machine started\n");
+/** this function finds pointer in stacks and prints value of this pointer */
+void find_pointer_in_stacks(ObjRef *obj){
+    for(int i = 0; i < global_stack_pointer; i++){
+        ObjRef ref = global_stack_slot[i].u.objRef;
+        if(global_stack_slot[i].isObjRef && ref == obj){
+            printf("value = %d\n", *(int *)global_stack_slot[i].u.objRef->data);
+            return;
+        }
+    }
 
+    for(int i = 0; i < int_pos; i++){
+        ObjRef ref = int_stack_slot[i].u.objRef;
+        if(int_stack_slot[i].isObjRef && ref == obj){
+            printf("value = %d\n", *(int *)int_stack_slot[i].u.objRef->data);
+            return;
+        }
+    }
+}
+
+void exec_prog(){
     int size = instruction_number;
     ProgramCounter = 0;
     unsigned int IR = -1;
@@ -843,18 +860,19 @@ void exec_prog(){
                         ProgramCounter--;
                         break;
                     }else if(strcmp("object", input) == 0){
-                        printf("object referene?\n");
-                        scanf("%p", input);
-                        printf("%p your pointer", input); /////// HOW TO READ POINTER
-                        //print_stack_state();
+                        ObjRef *pointer;
+                        printf("object reference?\n");
+                        scanf("%p", &pointer);
+
+                        find_pointer_in_stacks(pointer);
                         ProgramCounter--;
+                        break;
                     }else{
                         ProgramCounter--;
                         break;
                     }
 
                 }else if(strcmp("list", input) == 0){
-
                     print_prog();
                     printf("        --- end of code ---\n");
                     ProgramCounter--;
@@ -904,7 +922,8 @@ void exec_prog(){
 /** debugging */
 void debugging(char *file_name){
     debug_mode = 1;
-    open_file(file_name);
+    //open_file(file_name);
+    open_file("/Users/p.rozbytskyi/Desktop/out.bin");
     printf("DEBUG: file \'%s\' loaded (code size = %d, data size = %d)\n",
            file_name, instruction_number, global_stack_size);
 
@@ -912,6 +931,9 @@ void debugging(char *file_name){
 }
 
 int main(int argc, char *argv[]) {
+    //debugging("/Users/p.rozbytskyi/Desktop/out.bin");
+    //open_file("~/Desktop/out.bin");
+
     if (argv[1] == NULL) {
         printf("Error: no code file specified\n");
     }else{
