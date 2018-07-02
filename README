@@ -1,0 +1,6 @@
+to run the njvm please folling steps:
+
+1) be sure that bigint directory with necessary libs exits
+2) run run script once if you cloned repo
+3) run mknjvm script to compile all files
+4) run njvm
