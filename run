@@ -1,0 +1,10 @@
+#!/bin/sh
+
+cd bigint/
+make
+cd src/
+make
+gcc -g -Wall -o bigint.o -c bigint.c
+ar -crs libbigint.a bigint.o
+cd ..
+ 
