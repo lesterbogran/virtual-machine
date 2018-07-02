@@ -6,5 +6,6 @@ cd src/
 make
 gcc -g -Wall -o bigint.o -c bigint.c
 ar -crs libbigint.a bigint.o
+cp support.h ../../
 cd ..
  

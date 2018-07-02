@@ -4,7 +4,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <mach/machine.h>
 #include <stdbool.h>
 #include "bigint.h"
 #include "support.h"
@@ -62,7 +61,7 @@ void print_stack_state();
 //} *ObjRef;
 
 typedef struct {
-    boolean_t isObjRef;
+    bool isObjRef;
     union{
         ObjRef objRef;
         int number;
@@ -151,7 +150,7 @@ ObjRef newPrimObject(int dataSize) {
     return objRef;
 }
 
-StackSlot createStackSlot(int value, boolean_t is_ref){
+StackSlot createStackSlot(int value, bool is_ref){
     StackSlot stackSlot;
 
     if(is_ref){
