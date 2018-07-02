@@ -327,15 +327,15 @@ void push(StackSlot stackSlot){
 //        vm_stop();
     if(int_pos < int_stack_size){
         int_stack_slot[int_pos++] = stackSlot;
-        printf("pushed stackslot with pointer: %p\n", stackSlot.u.objRef);
+        //printf("pushed stackslot with pointer: %p\n", stackSlot.u.objRef);
 
-        if(stackSlot.isObjRef) {
-            bip.op1 = stackSlot.u.objRef;
-            printf("pushed this value: ");
-            bigPrint(stdout);
-            printf("\n ");
-        }
-        print_stack_state();
+//        if(stackSlot.isObjRef) {
+//            bip.op1 = stackSlot.u.objRef;
+//            printf("pushed this value: ");
+//            bigPrint(stdout);
+//            printf("\n ");
+//        }
+        //print_stack_state();
         ///////BIS HIERHI
     } else{
         stack_overflow();
@@ -576,11 +576,6 @@ StackSlot create_stack_slot(ObjRef objRef){
     StackSlot stackSlot;
     stackSlot.isObjRef = true;
     stackSlot.u.objRef = objRef;
-
-    printf("creating stack slot for :");
-    bip.op1 = objRef;
-    bigPrint(stdout);
-    printf("\n");
     return stackSlot;
 }
 
@@ -589,8 +584,8 @@ void setOp(){
     StackSlot f_elem = pop();
     StackSlot s_elem = pop();
 
-    bip.op1 = f_elem.u.objRef;
-    bip.op2 = s_elem.u.objRef;
+    bip.op1 = s_elem.u.objRef;
+    bip.op2 = f_elem.u.objRef;
 }
 
 void exec(unsigned int IR){
@@ -647,7 +642,6 @@ void exec(unsigned int IR){
         if(poped.isObjRef){
             bip.op1 = poped.u.objRef;
             bigPrint(stdout);
-            printf("\n");
         }else{
             //int_result = get_int_from_ref_slot(poped);
             printf("%p", poped.u.objRef);
@@ -724,59 +718,105 @@ void exec(unsigned int IR){
     }
     else if(i == HALT){
     }else if(i == EQ){
-        StackSlot first_pop = pop();
-        StackSlot second_pop = pop();
-
-        if(get_int_from_ref_slot(first_pop) == get_int_from_ref_slot(second_pop)){
-            push(createStackSlot(1, true));
+//        StackSlot first_pop = pop();
+//        StackSlot second_pop = pop();
+//
+//        if(get_int_from_ref_slot(first_pop) == get_int_from_ref_slot(second_pop)){
+//            push(createStackSlot(1, true));
+//        }else{
+//            push(createStackSlot(0, true));
+//        }
+        setOp();
+        if(bigCmp() == 0){
+            bigFromInt(1);
         }else{
-            push(createStackSlot(0, true));
+            bigFromInt(0);
         }
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
     }else if(i == NE){
-        StackSlot first_pop = pop();
-        StackSlot second_pop = pop();
-
-        if(get_int_from_ref_slot(first_pop) != get_int_from_ref_slot(second_pop)){
-            push(createStackSlot(1, true));
+        setOp();
+        if(bigCmp() != 0){
+            bigFromInt(1);
         }else{
-            push(createStackSlot(0, true));
+            bigFromInt(0);
         }
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
+
+//        if(get_int_from_ref_slot(first_pop) != get_int_from_ref_slot(second_pop)){
+//            push(createStackSlot(1, true));
+//        }else{
+//            push(createStackSlot(0, true));
+//        }
     }else if(i == LT){
-        StackSlot first_pop = pop();
-        StackSlot second_pop = pop();
+        setOp();
 
-        if(get_int_from_ref_slot(second_pop) < get_int_from_ref_slot(first_pop)){
-            push(createStackSlot(1, true));
+        if(bigCmp() < 0){
+            bigFromInt(1);
         }else{
-            push(createStackSlot(0, true));
+            bigFromInt(0);
         }
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
+//        if(get_int_from_ref_slot(second_pop) < get_int_from_ref_slot(first_pop)){
+//            push(createStackSlot(1, true));
+//        }else{
+//            push(createStackSlot(0, true));
+//        }
     }else if(i == LE){
-        StackSlot first_pop = pop();
-        StackSlot second_pop = pop();
+//        StackSlot first_pop = pop();
+//        StackSlot second_pop = pop();
+//
+//        if(get_int_from_ref_slot(second_pop) <= get_int_from_ref_slot(first_pop)){
+//            push(createStackSlot(1, true));
+//        }else{
+//            push(createStackSlot(0, true));
+//        }
 
-        if(get_int_from_ref_slot(second_pop) <= get_int_from_ref_slot(first_pop)){
-            push(createStackSlot(1, true));
+        setOp();
+        int cmp = bigCmp();
+        if(cmp < 0 || cmp == 0){
+            bigFromInt(1);
         }else{
-            push(createStackSlot(0, true));
+            bigFromInt(0);
         }
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
     }else if(i == GT){
-        StackSlot first_pop = pop();
-        StackSlot second_pop = pop();
-
-        if(get_int_from_ref_slot(second_pop) > get_int_from_ref_slot(first_pop)){
-            push(createStackSlot(1, true));
+        if(bigCmp() < 0){
+            bigFromInt(1);
         }else{
-            push(createStackSlot(0, true));
+            bigFromInt(0);
         }
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
+//        StackSlot first_pop = pop();
+//        StackSlot second_pop = pop();
+//
+//        if(get_int_from_ref_slot(second_pop) > get_int_from_ref_slot(first_pop)){
+//            push(createStackSlot(1, true));
+//        }else{
+//            push(createStackSlot(0, true));
+//        }
     }else if(i == GE){
-        StackSlot first_pop = pop();
-        StackSlot second_pop = pop();
-
-        if(get_int_from_ref_slot(second_pop) >= get_int_from_ref_slot(first_pop)){
-            push(createStackSlot(1, false));
+//        StackSlot first_pop = pop();
+//        StackSlot second_pop = pop();
+//
+//        if(get_int_from_ref_slot(second_pop) >= get_int_from_ref_slot(first_pop)){
+//            push(createStackSlot(1, false));
+//        }else{
+//            push(createStackSlot(0, false));
+//        }
+        setOp();
+        int cmp = bigCmp();
+        if(cmp > 0 || cmp == 0){
+            bigFromInt(1);
         }else{
-            push(createStackSlot(0, false));
+            bigFromInt(0);
         }
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
     }else if(i == BRF){
         StackSlot poped = pop();
 
