@@ -634,10 +634,14 @@ void exec(unsigned int IR){
         StackSlot stackSlot = create_stack_slot(bip.res);
         push(stackSlot);
     }else if(i == MUL){
-        StackSlot f_elem = pop();
-        StackSlot s_elem = pop();
-        int mul = get_int_from_ref_slot(f_elem) * get_int_from_ref_slot(s_elem);
-        push(createStackSlot(mul, true));
+//        StackSlot f_elem = pop();
+//        StackSlot s_elem = pop();
+//        int mul = get_int_from_ref_slot(f_elem) * get_int_from_ref_slot(s_elem);
+//        push(createStackSlot(mul, true));
+        setOp();
+        bigMul();
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
     }else if(i == WRINT){
         StackSlot poped = pop();
         if(poped.isObjRef){
@@ -699,34 +703,24 @@ void exec(unsigned int IR){
 //            printf("Error: division by zero \n");
 //            exit(1);
 //        }
-
         setOp();
-
         bigDiv();
-        bip.op1 = bip.res;
-
-        bigPrint(stdout);
-        printf("\n");
-
-        StackSlot stackSlot;
-        stackSlot.u.objRef = bip.res;
-        stackSlot.isObjRef = true;
+        StackSlot stackSlot = create_stack_slot(bip.res);
         push(stackSlot);
-
-        bip.op1 = bip.res;
-        bigPrint(stdout);
-        printf("\n"); ///////WHY ARE ALL NUMBERS NEGATIVE??????????
-
     }else if(i == MOD){
-        StackSlot f_elem = pop();
-        StackSlot s_elem = pop();
-        if(get_int_from_ref_slot(f_elem) != 0){
-            int div = get_int_from_ref_slot(s_elem) % get_int_from_ref_slot(f_elem);
-            push(createStackSlot(div, true));
-        }else{
-            printf("Error: division by zero\n");
-            exit(1);
-        }
+//        StackSlot f_elem = pop();
+//        StackSlot s_elem = pop();
+//        if(get_int_from_ref_slot(f_elem) != 0){
+//            int div = get_int_from_ref_slot(s_elem) % get_int_from_ref_slot(f_elem);
+//            push(createStackSlot(div, true));
+//        }else{
+//            printf("Error: division by zero\n");
+//            exit(1);
+//        }
+        setOp();
+        bigDiv();
+        StackSlot stackSlot = create_stack_slot(bip.rem);
+        push(stackSlot);
     }
     else if(i == HALT){
     }else if(i == EQ){
