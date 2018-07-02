@@ -1,6 +1,13 @@
 to run the njvm please folling steps:
 
 1) be sure that bigint directory with necessary libs exits
-2) run run script once if you cloned repo
-3) run mknjvm script to compile all files
+2) run "run" script once if you cloned repo
+3) run "mknjvm" script to compile all files
 4) run njvm
+
+to test your njvm please follow above and below:
+
+1) create folder Table in the root of the project
+2) place *.asm files into the Table folder
+3) run "test.sh" script
+ 
