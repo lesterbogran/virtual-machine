@@ -584,6 +584,7 @@ StackSlot create_stack_slot(ObjRef objRef){
     return stackSlot;
 }
 
+/** before each operation must be used this function */
 void setOp(){
     StackSlot f_elem = pop();
     StackSlot s_elem = pop();
@@ -606,10 +607,16 @@ void exec(unsigned int IR){
             exit(1);
         }
     }else if(i == ADD){
-        StackSlot f_elem = pop();
-        StackSlot s_elem = pop();
-        int sum = get_int_from_ref_slot(s_elem) + get_int_from_ref_slot(f_elem);
-        push(createStackSlot(sum, true));
+//        StackSlot f_elem = pop();
+//        StackSlot s_elem = pop();
+//        int sum = get_int_from_ref_slot(s_elem) + get_int_from_ref_slot(f_elem);
+//        push(createStackSlot(sum, true));
+
+        setOp();
+        bigAdd();
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
+
     }else if(i == ASF){
         int n = IMMEDIATE(IR);
         asf(n);
@@ -622,10 +629,10 @@ void exec(unsigned int IR){
         int to_push = IMMEDIATE(IR);
         push_local(SIGN_EXTEND(to_push));
     }else if(i == SUB){
-        StackSlot f_elem = pop();
-        StackSlot s_elem = pop();
-        int sub = get_int_from_ref_slot(s_elem) - get_int_from_ref_slot(f_elem);
-        push(createStackSlot(sub, true));
+        setOp();
+        bigSub();
+        StackSlot stackSlot = create_stack_slot(bip.res);
+        push(stackSlot);
     }else if(i == MUL){
         StackSlot f_elem = pop();
         StackSlot s_elem = pop();
@@ -675,15 +682,6 @@ void exec(unsigned int IR){
         stackSlot.isObjRef = true;
         stackSlot.u.objRef = bip.res;
 
-
-        printf("pointer %p\n", stackSlot.u.objRef);
-        printf("bip pointer %p\n", bip.res);
-//        bip.res += 1;
-//        printf("bip pointer1 %p\n", bip.res);
-//        printf("pointer %p\n", stackSlot.u.objRef);
-
-        ///////BIS HIER ALLES OKAY
-
         push(stackSlot);
         //bigPrint(stdout);
     }else if(i == RDCHR){
@@ -702,26 +700,9 @@ void exec(unsigned int IR){
 //            exit(1);
 //        }
 
-        //setOp();
-        StackSlot first = pop();
-        StackSlot second = pop();
-        bigFromInt(-1);
-        ObjRef negative = bip.res;
-
-        bip.op1 = first.u.objRef;
-        bigPrint(stdout);
-        printf("\n");
-        bip.op1 = second.u.objRef;
-        bigPrint(stdout);
-        printf("\n div\n");
-
-        bip.op1 = first.u.objRef;
-        bip.op2 = second.u.objRef;
+        setOp();
 
         bigDiv();
-        bip.op1 = bip.res;
-        bip.op2 = negative;
-        bigMul();
         bip.op1 = bip.res;
 
         bigPrint(stdout);
