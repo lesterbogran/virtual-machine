@@ -6,6 +6,10 @@
 #include <stdlib.h>
 #include <mach/machine.h>
 #include <stdbool.h>
+#include "bigint.h"
+#include "support.h"
+
+void print_stack_state();
 
 #define HALT 0
 #define PUSHC 1
@@ -48,14 +52,14 @@
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 
-#define VERSION 5
+#define VERSION 6
 #define STACK_SIZE 10000
 #define NULL 0
 
-typedef struct{
-    unsigned int size;
-    unsigned char data[1];
-} *ObjRef;
+//typedef struct{
+//    unsigned int size;
+//    unsigned char data[1];
+//} *ObjRef;
 
 typedef struct {
     boolean_t isObjRef;
@@ -125,6 +129,27 @@ void vm_stop(){
     exit(1);
 }
 
+
+/*
+ * This routine is called in case a fatal error has occurred.
+ * It should print the error message and terminate the program.
+ */
+void fatalError(char *msg) {
+    printf("Fatal error: %s\n", msg);
+    exit(1);
+}
+
+ObjRef newPrimObject(int dataSize) {
+    ObjRef objRef;
+
+    objRef = malloc(sizeof(unsigned int) +
+                    dataSize * sizeof(unsigned char));
+    if (objRef == NULL) {
+        fatalError("newPrimObject() got no memory");
+    }
+    objRef->size = dataSize;
+    return objRef;
+}
 
 StackSlot createStackSlot(int value, boolean_t is_ref){
     StackSlot stackSlot;
@@ -298,8 +323,20 @@ void empty_stack(){
 }
 
 void push(StackSlot stackSlot){
+//    if(stackSlot.isObjRef)
+//        vm_stop();
     if(int_pos < int_stack_size){
         int_stack_slot[int_pos++] = stackSlot;
+        printf("pushed stackslot with pointer: %p\n", stackSlot.u.objRef);
+
+        if(stackSlot.isObjRef) {
+            bip.op1 = stackSlot.u.objRef;
+            printf("pushed this value: ");
+            bigPrint(stdout);
+            printf("\n ");
+        }
+        print_stack_state();
+        ///////BIS HIERHI
     } else{
         stack_overflow();
     }
@@ -535,6 +572,26 @@ int get_int_from_ref_slot(StackSlot stackSlot){
     return * (int *)stackSlot.u.objRef->data;
 }
 
+StackSlot create_stack_slot(ObjRef objRef){
+    StackSlot stackSlot;
+    stackSlot.isObjRef = true;
+    stackSlot.u.objRef = objRef;
+
+    printf("creating stack slot for :");
+    bip.op1 = objRef;
+    bigPrint(stdout);
+    printf("\n");
+    return stackSlot;
+}
+
+void setOp(){
+    StackSlot f_elem = pop();
+    StackSlot s_elem = pop();
+
+    bip.op1 = f_elem.u.objRef;
+    bip.op2 = s_elem.u.objRef;
+}
+
 void exec(unsigned int IR){
     unsigned int i = IR >> 24;
 
@@ -577,8 +634,9 @@ void exec(unsigned int IR){
     }else if(i == WRINT){
         StackSlot poped = pop();
         if(poped.isObjRef){
-            int_result = get_int_from_ref_slot(poped);
-            printf("%d", int_result);
+            bip.op1 = poped.u.objRef;
+            bigPrint(stdout);
+            printf("\n");
         }else{
             //int_result = get_int_from_ref_slot(poped);
             printf("%p", poped.u.objRef);
@@ -607,23 +665,77 @@ void exec(unsigned int IR){
             vm_stop();
         }
     }else if(i == RDINT) {
-        int i;
-        scanf("%d", &i);
-        push(createStackSlot(i, true));
+
+        //int i;
+        //scanf("%d", &i);
+        //push(createStackSlot(i, true));
+
+        bigRead(stdin);
+        StackSlot stackSlot;
+        stackSlot.isObjRef = true;
+        stackSlot.u.objRef = bip.res;
+
+
+        printf("pointer %p\n", stackSlot.u.objRef);
+        printf("bip pointer %p\n", bip.res);
+//        bip.res += 1;
+//        printf("bip pointer1 %p\n", bip.res);
+//        printf("pointer %p\n", stackSlot.u.objRef);
+
+        ///////BIS HIER ALLES OKAY
+
+        push(stackSlot);
+        //bigPrint(stdout);
     }else if(i == RDCHR){
         char i;
         scanf("%c", &i);
-        push(createStackSlot(i, true));
+        push(createStackSlot(i, true)); /// what should i do with char??
     }else if(i == DIV){
-        StackSlot f_elem = pop();
-        StackSlot s_elem = pop();
-        if(get_int_from_ref_slot(f_elem) != 0){
-            int div = get_int_from_ref_slot(s_elem) / get_int_from_ref_slot(f_elem);
-            push(createStackSlot(div, true));
-        }else{
-            printf("Error: division by zero \n");
-            exit(1);
-        }
+//        StackSlot f_elem = pop();
+//        StackSlot s_elem = pop();
+
+//        if(get_int_from_ref_slot(f_elem) != 0){
+//            int div = get_int_from_ref_slot(s_elem) / get_int_from_ref_slot(f_elem);
+//            push(createStackSlot(div, true));
+//        }else{
+//            printf("Error: division by zero \n");
+//            exit(1);
+//        }
+
+        //setOp();
+        StackSlot first = pop();
+        StackSlot second = pop();
+        bigFromInt(-1);
+        ObjRef negative = bip.res;
+
+        bip.op1 = first.u.objRef;
+        bigPrint(stdout);
+        printf("\n");
+        bip.op1 = second.u.objRef;
+        bigPrint(stdout);
+        printf("\n div\n");
+
+        bip.op1 = first.u.objRef;
+        bip.op2 = second.u.objRef;
+
+        bigDiv();
+        bip.op1 = bip.res;
+        bip.op2 = negative;
+        bigMul();
+        bip.op1 = bip.res;
+
+        bigPrint(stdout);
+        printf("\n");
+
+        StackSlot stackSlot;
+        stackSlot.u.objRef = bip.res;
+        stackSlot.isObjRef = true;
+        push(stackSlot);
+
+        bip.op1 = bip.res;
+        bigPrint(stdout);
+        printf("\n"); ///////WHY ARE ALL NUMBERS NEGATIVE??????????
+
     }else if(i == MOD){
         StackSlot f_elem = pop();
         StackSlot s_elem = pop();
@@ -783,19 +895,18 @@ void print_stack_state(){
         while (SP > FP + 1) {
             SP--;
             printf("        \t%0*d", (2 - SP / 10), 0);
-            print_stack_slot(global_stack_slot[SP], SP);
+            print_stack_slot(int_stack_slot[SP], SP);
         }
 
         printf("fp         ---> ");
         printf("%0*d", (2 - FP / 10), 0);
-//        printf("%d:\t %d \n", FP, global_stack_slot[FP]);
-        print_stack_slot(global_stack_slot[FP], FP);
+
+        print_stack_slot(int_stack_slot[FP], FP);
 
         while (FP > 0) {
             FP--;
             printf("        \t%0*d", (2 - FP / 10), 0);
-//            printf("%d:\t %d \n", FP, int_stack[FP]);
-            print_stack_slot(global_stack_slot[FP], FP);
+            print_stack_slot(int_stack_slot[FP], FP);
         }
     }else{
         printf("sp, fp --->     000:   xxxx\n");
@@ -808,7 +919,10 @@ void find_pointer_in_stacks(ObjRef *obj){
     for(int i = 0; i < global_stack_pointer; i++){
         ObjRef ref = global_stack_slot[i].u.objRef;
         if(global_stack_slot[i].isObjRef && ref == obj){
-            printf("value = %d\n", *(int *)global_stack_slot[i].u.objRef->data);
+            printf("value = ");
+            bip.op1 = ref;
+            bigPrint(stdout);
+            printf("\n");
             return;
         }
     }
@@ -816,7 +930,10 @@ void find_pointer_in_stacks(ObjRef *obj){
     for(int i = 0; i < int_pos; i++){
         ObjRef ref = int_stack_slot[i].u.objRef;
         if(int_stack_slot[i].isObjRef && ref == obj){
-            printf("value = %d\n", *(int *)int_stack_slot[i].u.objRef->data);
+            printf("value = ");
+            bip.op1 = ref;
+            bigPrint(stdout);
+            printf("\n");
             return;
         }
     }
@@ -922,8 +1039,12 @@ void exec_prog(){
 /** debugging */
 void debugging(char *file_name){
     debug_mode = 1;
-    //open_file(file_name);
-    open_file("/Users/p.rozbytskyi/Desktop/out.bin");
+
+    // comment out below
+    open_file(file_name);
+
+    //remove comment below comment to debug in intelli
+    // open_file("/Users/p.rozbytskyi/Desktop/out.bin");
     printf("DEBUG: file \'%s\' loaded (code size = %d, data size = %d)\n",
            file_name, instruction_number, global_stack_size);
 

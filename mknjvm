@@ -1,3 +1,3 @@
 #!/bin/sh
-gcc -g -Wall -std=c99 -pedantic -o njvm njvm.c
+gcc -g -Wall -std=c99 -pedantic -o njvm njvm.c -I ~/Desktop/bigint/build/include -L ~/Desktop/bigint/build/lib -lbigint
 chmod +x njvm
