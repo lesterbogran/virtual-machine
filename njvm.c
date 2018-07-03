@@ -604,6 +604,9 @@ void setOp(){
 }
 
 void exec(unsigned int IR){
+    print_stack_state();
+    
+
     unsigned int i = IR >> 24;
 
     if(i == PUSHC){
@@ -795,15 +798,19 @@ void exec(unsigned int IR){
     }else if(i == DUP){
         duplicate();
     }else if(i == NEW){ // from here is the 7th version
-        // printf("new %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
         StackSlot stackSlot;
         stackSlot.isObjRef = true;
         stackSlot.u.objRef = newCompoundObject(SIGN_EXTEND(IMMEDIATE(IR)));
         push(stackSlot);
-    }else if(i == GETF){
-        // printf("getf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
-    }else if(i == PUTF){
-        // printf("putf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
+    }else if(i == GETF){// pushing value from the object onto stack
+        StackSlot slotToPush;
+        slotToPush.u.objRef = GET_REFS(pop().u.objRef)[IMMEDIATE(IR)];
+        slotToPush.isObjRef = true;
+        push(slotToPush);
+    }else if(i == PUTF){// pushing value from stack to object     
+        print_stack_state();                      
+        StackSlot toPushSlot = pop();    
+        GET_REFS(pop().u.objRef)[IMMEDIATE(IR)] = toPushSlot.u.objRef;  
     }else if(i == NEWA){
         // printf("newa \n");
     }else if(i == GETFA){
@@ -899,15 +906,20 @@ void find_pointer_in_stacks(ObjRef *obj){
     for(int i = 0; i < global_stack_pointer; i++){
         ObjRef ref = global_stack_slot[i].u.objRef;
         if(global_stack_slot[i].isObjRef && ref == obj){
-            if(!IS_PRIM(global_stack_slot[i].u.objRef)){
+           if(!IS_PRIM(global_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int compound_s = GET_SIZE(global_stack_slot[i].u.objRef);
+                printf("size: %d\n", compound_s);
+
+                ObjRef ref = global_stack_slot[i].u.objRef;
+                // ref++;
+                printf("searched pointer is: %p\n", ref);
                 for(int i = 0; i < compound_s; i++){
-                    printf("field[%04d]:\t = objref %p",i, GET_REFS(global_stack_slot[i].u.objRef)[i]);
+                    printf("field[%04d]:\t = (objref) %p\n",i, GET_REFS(ref)[i]);
                 }
-                printf("\t\t--- end of object ---");
+                printf("\t--- end of object ---\n");
             }else{
-                printf("value = ");
+                printf("\t<primitive object>\nvalue:\t ");
                 bip.op1 = ref;
                 bigPrint(stdout);
                 printf("\n");
@@ -915,42 +927,26 @@ void find_pointer_in_stacks(ObjRef *obj){
             }
         }
     }
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
-    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
 
     for(int i = 0; i < int_pos; i++){
-        ObjRef ref = int_stack_slot[i].u.objRef;
-        if(int_stack_slot[i].isObjRef && ref == obj){
+        printf("pointer: %p\n", int_stack_slot[i].u.objRef);
+        if(int_stack_slot[i].isObjRef && int_stack_slot[i].u.objRef == obj){
             if(!IS_PRIM(int_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int compound_s = GET_SIZE(int_stack_slot[i].u.objRef);
                 printf("size: %d\n", compound_s);
 
                 ObjRef ref = int_stack_slot[i].u.objRef;
-                ref++;
                 printf("searched pointer is: %p\n", ref);
+                //BIS HIERHIN ALLES OKAY, WEITER FOOBAR
                 for(int i = 0; i < compound_s; i++){
-                    printf("field[%04d]:\t = (objref) %p\n",i, GET_REFS(ref)[i]);
-                    ref++;
+                    int x = i - 1;
+                    printf("field[%04d]:\t = (objref) %p\n",i, GET_REFS(ref)[x]);
                 }
                 printf("\t--- end of object ---\n");
             }else{
-                printf("value = ");
-                bip.op1 = ref;
+                printf("\t<primitive object>\nvalue:\t ");
+                bip.op1 = int_stack_slot[i].u.objRef;
                 bigPrint(stdout);
                 printf("\n");
                 return;
