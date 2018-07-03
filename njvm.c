@@ -841,7 +841,10 @@ void exec(unsigned int IR){
         slot.u.objRef = bip.res;
         push(slot);
     }else if(i == PUSHN){
-        // printf("pushn \n");
+        StackSlot nilSlot;
+        nilSlot.isObjRef = true;
+        nilSlot.u.objRef = NULL;
+        push(nilSlot);
     }else if(i == REFEQ){
         // printf("refeq \n");
     }else if(i == REFNE){
