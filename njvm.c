@@ -811,8 +811,15 @@ void exec(unsigned int IR){
         print_stack_state();                      
         StackSlot toPushSlot = pop();    
         GET_REFS(pop().u.objRef)[IMMEDIATE(IR)] = toPushSlot.u.objRef;  
-    }else if(i == NEWA){
-        // printf("newa \n");
+    }else if(i == NEWA){ // creating new array and pop size from stack
+        StackSlot poped = pop();
+        bip.op1 = poped.u.objRef;
+        int arr_size = bigToInt();
+
+        StackSlot stackSlot;
+        stackSlot.isObjRef = true;
+        stackSlot.u.objRef = newCompoundObject(arr_size);
+        push(stackSlot);
     }else if(i == GETFA){
         // printf("getfa \n");
     }else if(i == PUTFA){
@@ -878,16 +885,13 @@ void print_stack_state(){
         printf("sp         ---> ");
         printf("%0*d", (2 - SP / 10), 0);
         printf("%d:\t xxxx \n", SP);
-
         while (SP > FP + 1) {
             SP--;
             printf("        \t%0*d", (2 - SP / 10), 0);
             print_stack_slot(int_stack_slot[SP], SP);
         }
-
         printf("fp         ---> ");
         printf("%0*d", (2 - FP / 10), 0);
-
         print_stack_slot(int_stack_slot[FP], FP);
 
         while (FP > 0) {
