@@ -51,7 +51,7 @@ void print_stack_state();
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 
-#define VERSION 6
+#define VERSION 7
 #define STACK_SIZE 10000
 #define NULL 0
 
