@@ -820,13 +820,21 @@ void exec(unsigned int IR){
         stackSlot.isObjRef = true;
         stackSlot.u.objRef = newCompoundObject(arr_size);
         push(stackSlot);
-    }else if(i == GETFA){
-        // printf("getfa \n");
-    }else if(i == PUTFA){
-        // printf("putfa \n");
+    }else if(i == GETFA){ // pushing value from the object onto stack and take place value from pushc
+        bip.op1 = pop().u.objRef;
+        int place_from_push = bigToInt();
+        StackSlot slot;
+        slot.isObjRef = true;  
+        slot.u.objRef = GET_REFS(pop().u.objRef)[place_from_push];
+        push(slot);
+    }else if(i == PUTFA){ // pushing value from stack to object at place from pushc 
+        StackSlot num_to_push = pop();
+        bip.op1 = pop().u.objRef;
+        int place_from_push = bigToInt();
+        StackSlot arr_slot = pop();   
+        GET_REFS(arr_slot.u.objRef)[place_from_push] = num_to_push.u.objRef;  
     }else if(i == GETSZ){
         int size = GET_SIZE(pop().u.objRef);
-        printf("%d\n", size);
         bigFromInt(size);
         StackSlot slot;
         slot.isObjRef = true;
