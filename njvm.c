@@ -9,6 +9,7 @@
 #include "support.h"
 
 void print_stack_state();
+ObjRef create_compound_object(int n);
 
 #define HALT 0
 #define PUSHC 1
@@ -61,6 +62,11 @@ void print_stack_state();
 
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
+
+#define MSB (1 << (8 * sizeof(unsigned int) - 1))
+#define IS_PRIM(objRef) (((objRef)->size & MSB) == 0)
+#define GET_SIZE(objRef) ((objRef)->size & ~MSB)
+#define GET_REFS(objRef) ((ObjRef *)(objRef)->data)
 
 #define VERSION 7
 #define STACK_SIZE 10000
@@ -152,6 +158,21 @@ ObjRef newPrimObject(int dataSize) {
         fatalError("newPrimObject() got no memory");
     }
     objRef->size = dataSize;
+    return objRef;
+}
+
+ObjRef newCompoundObject(int dataSize){
+    ObjRef objRef = malloc(sizeof(unsigned int) + 
+                    sizeof(ObjRef) * dataSize);
+    
+    printf("created new compound object with %d elements\n", dataSize);
+
+    for(int i = 0; i < dataSize; i++){
+        GET_REFS(objRef)[i] = NULL;
+        printf("%p\n", GET_REFS(objRef)[i]);
+    }
+    objRef->size = dataSize | MSB;
+
     return objRef;
 }
 
@@ -456,6 +477,16 @@ void pushr(){
     }
 }
 
+ObjRef create_compound_object(int n){
+    ObjRef objRef = malloc(sizeof(unsigned int) + sizeof(int) * n); //first byte 
+    objRef->size = n | MSB;
+
+    for(int i = 0; i < n; i++){
+        GET_REFS(objRef)[i] = NULL;
+    }
+    return objRef;
+}
+
 void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
 
@@ -610,18 +641,15 @@ void exec(unsigned int IR){
         bigAdd();
         StackSlot stackSlot = create_stack_slot(bip.res);
         push(stackSlot);
-
     }else if(i == ASF){
         int n = IMMEDIATE(IR);
         asf(n);
     }else if(i == RSF){
         rsf();
     }else if(i == POPL){
-        int to_push = IMMEDIATE(IR);
-        pop_local(SIGN_EXTEND(to_push));
+        pop_local(SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == PUSHL){
-        int to_push = IMMEDIATE(IR);
-        push_local(SIGN_EXTEND(to_push));
+        push_local(SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == SUB){
         setOp();
         bigSub();
@@ -674,7 +702,7 @@ void exec(unsigned int IR){
     }else if(i == RDCHR){
         char i;
         scanf("%c", &i);
-        push(createStackSlot(i, true)); /// what should i do with char??
+        push(createStackSlot(i, true));
     }else if(i == DIV){
         setOp();
         bigDiv();
@@ -685,8 +713,6 @@ void exec(unsigned int IR){
         bigDiv();
         StackSlot stackSlot = create_stack_slot(bip.rem);
         push(stackSlot);
-    }
-    else if(i == HALT){
     }else if(i == EQ){
         setOp();
         if(bigCmp() == 0){
@@ -745,15 +771,14 @@ void exec(unsigned int IR){
         push(stackSlot);
     }else if(i == BRF){
         StackSlot poped = pop();
-        
+
         bip.op1 = poped.u.objRef;
-        bigFromInt(0);  
+        bigFromInt(0);
         bip.op2 = poped.u.objRef;
         bip.op1 = bip.res;
         if(bigCmp() == 0){
             jump(IMMEDIATE(IR));
         }
-
     }else if(i == BRT){
         StackSlot poped = pop();
 
@@ -762,7 +787,6 @@ void exec(unsigned int IR){
         bip.op1 = bip.res;
         bip.op2 = poped.u.objRef;
         if(bigCmp() == 0){
-            printf("in brt\n");
             jump(IMMEDIATE(IR));
         }
     }else if(i == JMP){
@@ -787,11 +811,33 @@ void exec(unsigned int IR){
         popr();
     }else if(i == DUP){
         duplicate();
-    }else{
-        //printf("Ninja Virtual Machine stopped\n");
+    }else if(i == NEW){ // from here is the 7th version
+        // printf("new %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
+        StackSlot stackSlot;
+        stackSlot.isObjRef = true;
+        stackSlot.u.objRef = newCompoundObject(SIGN_EXTEND(IMMEDIATE(IR)));
+        push(stackSlot);
+    }else if(i == GETF){
+        // printf("getf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
+    }else if(i == PUTF){
+        // printf("putf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
+    }else if(i == NEWA){
+        // printf("newa \n");
+    }else if(i == GETFA){
+        // printf("getfa \n");
+    }else if(i == PUTFA){
+        // printf("putfa \n");
+    }else if(i == GETSZ){
+        // printf("getsz \n");
+    }else if(i == PUSHN){
+        // printf("pushn \n");
+    }else if(i == REFEQ){
+        // printf("refeq \n");
+    }else if(i == REFNE){
+        // printf("refne \n");
+    }else if(i == HALT){
     }
 }
-
 
 void print_prog(){
     int PC = 0;
@@ -870,22 +916,62 @@ void find_pointer_in_stacks(ObjRef *obj){
     for(int i = 0; i < global_stack_pointer; i++){
         ObjRef ref = global_stack_slot[i].u.objRef;
         if(global_stack_slot[i].isObjRef && ref == obj){
-            printf("value = ");
-            bip.op1 = ref;
-            bigPrint(stdout);
-            printf("\n");
-            return;
+            if(!IS_PRIM(global_stack_slot[i].u.objRef)){
+                printf("<compound object>\n");
+                int compound_s = GET_SIZE(global_stack_slot[i].u.objRef);
+                for(int i = 0; i < compound_s; i++){
+                    printf("field[%04d]:\t = objref %p",i, GET_REFS(global_stack_slot[i].u.objRef)[i]);
+                }
+                printf("\t\t--- end of object ---");
+            }else{
+                printf("value = ");
+                bip.op1 = ref;
+                bigPrint(stdout);
+                printf("\n");
+                return;
+            }
         }
     }
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
+    // =================OBEN GENAU SO MACHEN WIE UNTEN==============
 
     for(int i = 0; i < int_pos; i++){
         ObjRef ref = int_stack_slot[i].u.objRef;
         if(int_stack_slot[i].isObjRef && ref == obj){
-            printf("value = ");
-            bip.op1 = ref;
-            bigPrint(stdout);
-            printf("\n");
-            return;
+            if(!IS_PRIM(int_stack_slot[i].u.objRef)){
+                printf("<compound object>\n");
+                int compound_s = GET_SIZE(int_stack_slot[i].u.objRef);
+                printf("size: %d\n", compound_s);
+
+                //ObjRef ref = GET_REFS(int_stack_slot[i].u.objRef);
+                ObjRef ref = int_stack_slot[i].u.objRef;
+                printf("searched pointer is: %p\n", ref);
+                for(int i = 0; i < compound_s; i++){
+                    printf("field[%04d]:\t = (objref) %p\n",i, GET_REFS(ref)[i]);
+                    ref++;
+                }
+                printf("\t--- end of object ---\n");
+            }else{
+                printf("value = ");
+                bip.op1 = ref;
+                bigPrint(stdout);
+                printf("\n");
+                return;
+            }
         }
     }
 }
