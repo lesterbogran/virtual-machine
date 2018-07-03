@@ -295,14 +295,6 @@ void global_variables_check(FILE * file){
     global_stack_size = globals;
     create_global_stack();
 }
-
-/**
- * Allocating memory for local stack
- */
-//void create_stack(){
-//    int_stack = malloc(int_stack_size * sizeof(int));
-//}
-
 /**
  * Allocating memory for return register
  */
@@ -360,15 +352,6 @@ StackSlot pop(){
     } else {
         StackSlot stack_var = int_stack_slot[int_pos - 1];
         int_pos--;
-        /** Why i did it??????? foobar*/
-//        if(!stack_var.isObjRef){
-//            if (stack_var.u.number & 0x00800000) {
-//                stack_var.u.number |= 0xFF000000;
-//                return stack_var.u.number;
-//            } else {
-//                return stack_var.u.number;
-//            }
-//        }
         return stack_var;
     }
 }
@@ -957,8 +940,8 @@ void find_pointer_in_stacks(ObjRef *obj){
                 int compound_s = GET_SIZE(int_stack_slot[i].u.objRef);
                 printf("size: %d\n", compound_s);
 
-                //ObjRef ref = GET_REFS(int_stack_slot[i].u.objRef);
                 ObjRef ref = int_stack_slot[i].u.objRef;
+                ref++;
                 printf("searched pointer is: %p\n", ref);
                 for(int i = 0; i < compound_s; i++){
                     printf("field[%04d]:\t = (objref) %p\n",i, GET_REFS(ref)[i]);
