@@ -846,9 +846,29 @@ void exec(unsigned int IR){
         nilSlot.u.objRef = NULL;
         push(nilSlot);
     }else if(i == REFEQ){
-        // printf("refeq \n");
+        StackSlot ref_one = pop();
+        StackSlot ref_two = pop();
+        StackSlot slot;
+        slot.isObjRef = true;
+        if(ref_one.u.objRef == ref_two.u.objRef){
+            bigFromInt(1);
+        }else{
+            bigFromInt(0);
+        }
+        slot.u.objRef = bip.res;
+        push(slot);
     }else if(i == REFNE){
-        // printf("refne \n");
+        StackSlot ref_one = pop();
+        StackSlot ref_two = pop();
+        StackSlot slot;
+        slot.isObjRef = true;
+        if(ref_one.u.objRef != ref_two.u.objRef){
+            bigFromInt(1);
+        }else{
+            bigFromInt(0);
+        }
+        slot.u.objRef = bip.res;
+        push(slot);
     }else if(i == HALT){
     }
 }
