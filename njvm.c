@@ -48,17 +48,23 @@ void print_stack_state();
 
 #define DUP 31
 
+#define NEW 32
+#define GETF 33
+#define PUTF 34
+#define NEWA 35
+#define GETFA 36
+#define PUTFA 37
+#define GETSZ 38
+#define PUSHN 39
+#define REFEQ 40
+#define REFNE 41
+
 #define IMMEDIATE(x) ((x)&0x00FFFFFF)
 #define SIGN_EXTEND(i) ((i) & 0x00800000 ? (i) | 0xFF000000 : (i))
 
 #define VERSION 7
 #define STACK_SIZE 10000
 #define NULL 0
-
-//typedef struct{
-//    unsigned int size;
-//    unsigned char data[1];
-//} *ObjRef;
 
 typedef struct {
     bool isObjRef;
@@ -128,7 +134,6 @@ void vm_stop(){
     exit(1);
 }
 
-
 /*
  * This routine is called in case a fatal error has occurred.
  * It should print the error message and terminate the program.
@@ -163,7 +168,6 @@ StackSlot createStackSlot(int value, bool is_ref){
         stackSlot.isObjRef = false;
         stackSlot.u.number = value;
     }
-
     return stackSlot;
 }
 
@@ -322,20 +326,8 @@ void empty_stack(){
 }
 
 void push(StackSlot stackSlot){
-//    if(stackSlot.isObjRef)
-//        vm_stop();
     if(int_pos < STACK_SIZE){
         int_stack_slot[int_pos++] = stackSlot;
-        //printf("pushed stackslot with pointer: %p\n", stackSlot.u.objRef);
-
-//        if(stackSlot.isObjRef) {
-//            bip.op1 = stackSlot.u.objRef;
-//            printf("pushed this value: ");
-//            bigPrint(stdout);
-//            printf("\n ");
-//        }
-        //print_stack_state();
-        ///////BIS HIERHI
     } else{
         stack_overflow();
     }
@@ -468,28 +460,20 @@ void print_command(unsigned int IR){
     unsigned int i = IR >> 24;
 
     if(i == PUSHC){
-        int to_push = IMMEDIATE(IR);
-        printf("pushc %d\n", SIGN_EXTEND(to_push));
+        printf("pushc %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == ADD){
         printf("add\n");
-
     }else if(i == SUB){
         printf("sub\n");
-
     }else if(i == MUL){
         printf("mul\n");
-
     }else if(i == WRINT){
-
         printf("wrint\n");
     }else if(i == WRCHR){
-
         printf("wrchr\n");
     }else if(i == RDINT) {
-
         printf("rdint \n");
     }else if(i == RDCHR){
-
         printf("rdchr \n");
     }else if(i == DIV){
         printf("div \n");
@@ -498,22 +482,17 @@ void print_command(unsigned int IR){
     }else if(i == HALT){
         printf("halt\n");
     }else if(i == ASF){
-        int to_push = IMMEDIATE(IR);
-        printf("asf %d\n", SIGN_EXTEND(to_push));
+        printf("asf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == RSF){
         printf("rsf\n");
     }else if(i == POPL){
-        int to_push = IMMEDIATE(IR);
-        printf("popl %d\n", SIGN_EXTEND(to_push));
+        printf("popl %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == PUSHL){
-        int to_push = IMMEDIATE(IR);
-        printf("pushl %d\n", SIGN_EXTEND(to_push));
+        printf("pushl %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == POPG){
-        int to_push = IMMEDIATE(IR);
-        printf("popg %d\n", SIGN_EXTEND(to_push));
+        printf("popg %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == PUSHG){
-        int to_push = IMMEDIATE(IR);
-        printf("pushg %d\n", SIGN_EXTEND(to_push));
+        printf("pushg %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == EQ){
         printf("eq\n");
     }else if(i == NE){
@@ -527,23 +506,43 @@ void print_command(unsigned int IR){
     }else if(i == GE){
         printf("ge\n");
     }else if(i == JMP){
-        printf("jmp %d\n", IMMEDIATE(IR));
+        printf("jmp %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == BRF){
-        printf("brf %d\n", IMMEDIATE(IR));
+        printf("brf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == BRT){
-        printf("brt %d\n", IMMEDIATE(IR));
+        printf("brt %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == CALL){
-        printf("call %d\n", IMMEDIATE(IR));
+        printf("call %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == RET){
         printf("ret \n");
     }else if(i == DROP){
-        printf("drop %d\n", IMMEDIATE(IR));
+        printf("drop %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
     }else if(i == PUSHR){
         printf("pushr \n");
     }else if(i == POPR){
         printf("popr \n");
     }else if(i == DUP){
         printf("dup \n");
+    }else if(i == NEW){ // from here is the 7th version
+        printf("new %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
+    }else if(i == GETF){
+        printf("getf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
+    }else if(i == PUTF){
+        printf("putf %d\n", SIGN_EXTEND(IMMEDIATE(IR)));
+    }else if(i == NEWA){
+        printf("newa \n");
+    }else if(i == GETFA){
+        printf("getfa \n");
+    }else if(i == PUTFA){
+        printf("putfa \n");
+    }else if(i == GETSZ){
+        printf("getsz \n");
+    }else if(i == PUSHN){
+        printf("pushn \n");
+    }else if(i == REFEQ){
+        printf("refeq \n");
+    }else if(i == REFNE){
+        printf("refne \n");
     }
 }
 
