@@ -825,7 +825,13 @@ void exec(unsigned int IR){
     }else if(i == PUTFA){
         // printf("putfa \n");
     }else if(i == GETSZ){
-        // printf("getsz \n");
+        int size = GET_SIZE(pop().u.objRef);
+        printf("%d\n", size);
+        bigFromInt(size);
+        StackSlot slot;
+        slot.isObjRef = true;
+        slot.u.objRef = bip.res;
+        push(slot);
     }else if(i == PUSHN){
         // printf("pushn \n");
     }else if(i == REFEQ){
