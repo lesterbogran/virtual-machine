@@ -1,0 +1,17 @@
+rdint
+rdint
+lt
+wrint
+rdint
+rdint
+gt
+wrint
+rdint
+rdint
+ne
+wrint
+rdint
+rdint
+eq
+wrint
+halt

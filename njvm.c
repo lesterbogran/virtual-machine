@@ -324,7 +324,7 @@ void empty_stack(){
 void push(StackSlot stackSlot){
 //    if(stackSlot.isObjRef)
 //        vm_stop();
-    if(int_pos < int_stack_size){
+    if(int_pos < STACK_SIZE){
         int_stack_slot[int_pos++] = stackSlot;
         //printf("pushed stackslot with pointer: %p\n", stackSlot.u.objRef);
 
@@ -656,7 +656,7 @@ void exec(unsigned int IR){
             vm_stop();
         }
     }else if(i == PUSHG){
-        if(int_pos < sizeof(int_stack)/ 4) {
+        if(int_pos < STACK_SIZE) {
             int to_push = IMMEDIATE(IR);
             push(global_stack_slot[to_push]);
         }else{
@@ -725,7 +725,8 @@ void exec(unsigned int IR){
         StackSlot stackSlot = create_stack_slot(bip.res);
         push(stackSlot);
     }else if(i == GT){
-        if(bigCmp() < 0){
+        setOp();
+        if(bigCmp() > 0){
             bigFromInt(1);
         }else{
             bigFromInt(0);
@@ -744,14 +745,24 @@ void exec(unsigned int IR){
         push(stackSlot);
     }else if(i == BRF){
         StackSlot poped = pop();
-
-        if(get_int_from_ref_slot(poped) == 0){
+        
+        bip.op1 = poped.u.objRef;
+        bigFromInt(0);  
+        bip.op2 = poped.u.objRef;
+        bip.op1 = bip.res;
+        if(bigCmp() == 0){
             jump(IMMEDIATE(IR));
         }
+
     }else if(i == BRT){
         StackSlot poped = pop();
 
-        if(get_int_from_ref_slot(poped) == 1){
+        bip.op1 = poped.u.objRef;
+        bigFromInt(1);
+        bip.op1 = bip.res;
+        bip.op2 = poped.u.objRef;
+        if(bigCmp() == 0){
+            printf("in brt\n");
             jump(IMMEDIATE(IR));
         }
     }else if(i == JMP){
