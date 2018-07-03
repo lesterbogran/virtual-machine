@@ -427,9 +427,12 @@ void asf(int n){
  */
 void rsf(){
     int_pos = fp;
-
     StackSlot fp_slot = pop();
-    fp = *(int *)fp_slot.u.objRef->data;
+    if(fp_slot.isObjRef){
+        fp = *(int *)fp_slot.u.objRef->data;
+    }else{
+        fp = fp_slot.u.number;
+    }
 }
 
 
@@ -830,7 +833,7 @@ void print_stack_slot(StackSlot stackSlot, int SP){
     if(stackSlot.isObjRef){
         printf("%d:\t (objref) %p \n", SP, stackSlot.u.objRef);
     }else{
-        printf("%d:\t %d \n", SP, stackSlot.u.number);
+        printf("%d:\t (number) %d \n", SP, stackSlot.u.number);
     }
 }
 /** fucking foobar function prints stack state. 2 fucking hours debugging */
