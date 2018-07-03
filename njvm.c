@@ -596,7 +596,10 @@ void exec(unsigned int IR){
     if(i == PUSHC){
         if(int_pos < int_stack_size) {
             int to_push = IMMEDIATE(IR);
-            StackSlot stackSlot = createStackSlot(to_push, true);
+            bigFromInt(to_push);
+            StackSlot stackSlot;
+            stackSlot.isObjRef = true;
+            stackSlot.u.objRef = bip.res;
             push(stackSlot);
         }else{
             printf("stack is full\nhalt\n");
@@ -604,11 +607,6 @@ void exec(unsigned int IR){
             exit(1);
         }
     }else if(i == ADD){
-//        StackSlot f_elem = pop();
-//        StackSlot s_elem = pop();
-//        int sum = get_int_from_ref_slot(s_elem) + get_int_from_ref_slot(f_elem);
-//        push(createStackSlot(sum, true));
-
         setOp();
         bigAdd();
         StackSlot stackSlot = create_stack_slot(bip.res);
@@ -645,8 +643,9 @@ void exec(unsigned int IR){
         }
     }else if(i == WRCHR){
         StackSlot poped = pop();
-        int_result = get_int_from_ref_slot(poped);
-        printf("%c", int_result);
+        bip.op1 = poped.u.objRef;
+        int to_print = bigToInt();
+        printf("%c", to_print);
     }else if(i == POPG){
         int position = IMMEDIATE(IR);
         StackSlot to_push = pop();
@@ -673,7 +672,6 @@ void exec(unsigned int IR){
         stackSlot.u.objRef = bip.res;
 
         push(stackSlot);
-        //bigPrint(stdout);
     }else if(i == RDCHR){
         char i;
         scanf("%c", &i);
