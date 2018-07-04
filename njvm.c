@@ -192,7 +192,6 @@ StackSlot createStackSlot(int value, bool is_ref){
     return stackSlot;
 }
 
-
 /**
  * Closing file stream
  * @param file
@@ -604,9 +603,6 @@ void setOp(){
 }
 
 void exec(unsigned int IR){
-    print_stack_state();
-    
-
     unsigned int i = IR >> 24;
 
     if(i == PUSHC){
@@ -808,7 +804,6 @@ void exec(unsigned int IR){
         slotToPush.isObjRef = true;
         push(slotToPush);
     }else if(i == PUTF){// pushing value from stack to object     
-        print_stack_state();                      
         StackSlot toPushSlot = pop();    
         GET_REFS(pop().u.objRef)[IMMEDIATE(IR)] = toPushSlot.u.objRef;  
     }else if(i == NEWA){ // creating new array and pop size from stack
@@ -888,7 +883,6 @@ void print_prog(){
     }
 }
 
-
 /** prints values of the global stack */
 void print_global_stack(){
     int i = 0;
@@ -913,7 +907,7 @@ void print_stack_slot(StackSlot stackSlot, int SP){
         printf("%d:\t (number) %d \n", SP, stackSlot.u.number);
     }
 }
-/** fucking foobar function prints stack state. 2 fucking hours debugging */
+/** fucking foobar function, two fucking hours debugging. Don't touch this shit*/
 void print_stack_state(){
     int SP = int_pos;
     int FP = fp;
@@ -1070,10 +1064,10 @@ void exec_prog(){
                     }
                     ProgramCounter--;
                     break;
-                }else if(strcmp("step", input) == 0){ //ok
+                }else if(strcmp("step", input) == 0){
                     exec(IR);
                     break;
-                }else if(strcmp("run", input) == 0){ //ok
+                }else if(strcmp("run", input) == 0){
 
                     if(breakpoint_mode == 1){
                         printf("%0*d", (2 - breakpoint_instruction_number / 10), 0);
@@ -1085,7 +1079,7 @@ void exec_prog(){
                     debug_mode = 0;
                     exec(IR);
                     break;
-                }else if(strcmp("quit", input) == 0) { //ok
+                }else if(strcmp("quit", input) == 0) {
                     vm_stop();
                     break;
                 }
@@ -1100,12 +1094,7 @@ void exec_prog(){
 /** debugging */
 void debugging(char *file_name){
     debug_mode = 1;
-
-    // comment out below
     open_file(file_name);
-
-    //remove comment below comment to debug in intelli
-    // open_file("/Users/p.rozbytskyi/Desktop/out.bin");
     printf("DEBUG: file \'%s\' loaded (code size = %d, data size = %d)\n",
            file_name, instruction_number, global_stack_size);
 
@@ -1113,9 +1102,6 @@ void debugging(char *file_name){
 }
 
 int main(int argc, char *argv[]) {
-    //debugging("/Users/p.rozbytskyi/Desktop/out.bin");
-    //open_file("~/Desktop/out.bin");
-
     if (argv[1] == NULL) {
         printf("Error: no code file specified\n");
     }else{
