@@ -99,7 +99,7 @@ int fp = 0;
 int const int_stack_size = 10000;
 
 /** return register size */
-int const return_register_size = 100;
+int const return_register_size = 1000;
 /** return register position */
 int return_register_pos = 0;
 /** return register */
@@ -164,12 +164,9 @@ ObjRef newPrimObject(int dataSize) {
 ObjRef newCompoundObject(int dataSize){
     ObjRef objRef = malloc(sizeof(unsigned int) + 
                     sizeof(ObjRef) * dataSize);
-    
-    printf("created new compound object with %d elements\n", dataSize);
 
     for(int i = 0; i < dataSize; i++){
         GET_REFS(objRef)[i] = NULL;
-        printf("%p\n", GET_REFS(objRef)[i]);
     }
     objRef->size = dataSize | MSB;
 
