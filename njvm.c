@@ -907,7 +907,7 @@ void print_stack_slot(StackSlot stackSlot, int SP){
         printf("%d:\t (number) %d \n", SP, stackSlot.u.number);
     }
 }
-/** fucking foobar function, two fucking hours debugging. Don't touch this shit*/
+/** fucking foobar function, two fucking hours debugging. Don't even touch this shit, dude :D */
 void print_stack_state(){
     int SP = int_pos;
     int FP = fp;
