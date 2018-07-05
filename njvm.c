@@ -604,11 +604,17 @@ void exec(unsigned int IR){
 
     if(i == PUSHC){
         if(int_pos < int_stack_size) {
-            int to_push = IMMEDIATE(IR);
+            int to_push = SIGN_EXTEND(IMMEDIATE(IR));
+            printf("to push: %d\n", to_push);
             bigFromInt(to_push);
             StackSlot stackSlot;
             stackSlot.isObjRef = true;
             stackSlot.u.objRef = bip.res;
+            /////////////////////////
+            bip.op1 = bip.res;
+            bigPrint(stdout);
+            printf("\n");
+            /////////////////////////
             push(stackSlot);
         }else{
             printf("Error: stack overflow\nhalt\n");
@@ -941,7 +947,7 @@ void print_stack_state(){
 /** this function finds pointer in stacks and prints value of this pointer */
 void find_pointer_in_stacks(ObjRef *obj){
     for(int i = 0; i < global_stack_pointer; i++){
-        if(global_stack_slot[i].isObjRef && global_stack_slot[i].u.objRef == obj){
+        if(global_stack_slot[i].u.objRef == obj){
            if(!IS_PRIM(global_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int pos = GET_SIZE(global_stack_slot[i].u.objRef);
@@ -958,18 +964,11 @@ void find_pointer_in_stacks(ObjRef *obj){
                 printf("\n");
                 return;
             }
-        }else{
-                printf("\t<primitive object>\nvalue:\t ");
-                bigFromInt(global_stack_slot[i].u.number);
-                bip.op1 = bip.res;
-                bigPrint(stdout);
-                printf("\n");
-                return;
         }
     }
 
     for(int i = 0; i < int_pos; i++){
-         if(int_stack_slot[i].isObjRef && int_stack_slot[i].u.objRef == obj){
+         if(int_stack_slot[i].u.objRef == obj){
            if(!IS_PRIM(int_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int pos = GET_SIZE(int_stack_slot[i].u.objRef);
@@ -985,13 +984,6 @@ void find_pointer_in_stacks(ObjRef *obj){
                 printf("\n");
                 return;
             }
-        }else{
-                printf("\t<primitive object>\nvalue:\t ");
-                bigFromInt(int_stack_slot[i].u.number);
-                bip.op1 = bip.res;
-                bigPrint(stdout);
-                printf("\n");
-                return;
         }
     }
 }
