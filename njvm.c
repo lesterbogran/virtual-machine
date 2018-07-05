@@ -605,16 +605,10 @@ void exec(unsigned int IR){
     if(i == PUSHC){
         if(int_pos < int_stack_size) {
             int to_push = SIGN_EXTEND(IMMEDIATE(IR));
-            printf("to push: %d\n", to_push);
             bigFromInt(to_push);
             StackSlot stackSlot;
             stackSlot.isObjRef = true;
             stackSlot.u.objRef = bip.res;
-            /////////////////////////
-            bip.op1 = bip.res;
-            bigPrint(stdout);
-            printf("\n");
-            /////////////////////////
             push(stackSlot);
         }else{
             printf("Error: stack overflow\nhalt\n");
@@ -819,12 +813,18 @@ void exec(unsigned int IR){
         stackSlot.u.objRef = newCompoundObject(arr_size);
         push(stackSlot);
     }else if(i == GETFA){ // pushing value from the object onto stack and take place value from pushc
-        bip.op1 = pop().u.objRef;
-        int place_from_push = bigToInt();
-        StackSlot slot;
-        slot.isObjRef = true;  
-        slot.u.objRef = GET_REFS(pop().u.objRef)[place_from_push];
-        push(slot);
+        StackSlot funnySlot = pop();
+        if(!IS_PRIM(funnySlot.u.objRef)){
+            bip.op1 = funnySlot.u.objRef;
+            int place_from_push = bigToInt();
+            StackSlot slot;
+            slot.isObjRef = true;  
+            StackSlot lolSlot = pop(); 
+            slot.u.objRef = GET_REFS(lolSlot.u.objRef)[place_from_push];
+            push(slot);
+        }else{
+            fatalError("stack underflow");
+        }
     }else if(i == PUTFA){ // pushing value from stack to object at place from pushc 
         StackSlot num_to_push = pop();
         bip.op1 = pop().u.objRef;
