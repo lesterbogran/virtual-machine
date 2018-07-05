@@ -145,7 +145,7 @@ void vm_stop(){
  * It should print the error message and terminate the program.
  */
 void fatalError(char *msg) {
-    printf("Fatal error: %s\n", msg);
+    printf("Error: %s\n", msg);
     exit(1);
 }
 
@@ -325,12 +325,12 @@ int open_file(char * file_name){
 }
 
 void stack_overflow(){
-    printf("Error. Stack is full!\n");
+    printf("Error: stack overflow\n");
     vm_stop();
 }
 
 void empty_stack(){
-    printf("Error. Stack is empty!\n");
+    printf("Error. Stack underflow!\n");
     vm_stop();
 }
 
@@ -611,7 +611,7 @@ void exec(unsigned int IR){
             stackSlot.u.objRef = bip.res;
             push(stackSlot);
         }else{
-            printf("stack is full\nhalt\n");
+            printf("Error: stack overflow\nhalt\n");
             printf("Ninja Virtual Machine stopped\n");
             exit(1);
         }
@@ -826,12 +826,17 @@ void exec(unsigned int IR){
         StackSlot arr_slot = pop();   
         GET_REFS(arr_slot.u.objRef)[place_from_push] = num_to_push.u.objRef;  
     }else if(i == GETSZ){
-        int size = GET_SIZE(pop().u.objRef);
-        bigFromInt(size);
-        StackSlot slot;
-        slot.isObjRef = true;
-        slot.u.objRef = bip.res;
-        push(slot);
+        StackSlot slot = pop();
+        if(slot.u.objRef != NULL){
+            int size = GET_SIZE(slot.u.objRef);
+            bigFromInt(size);
+            StackSlot slot;
+            slot.isObjRef = true;
+            slot.u.objRef = bip.res;
+            push(slot);
+        }else{
+            fatalError("stack underflow\n");
+        }
     }else if(i == PUSHN){
         StackSlot nilSlot;
         nilSlot.isObjRef = true;
