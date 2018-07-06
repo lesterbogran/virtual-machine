@@ -823,7 +823,12 @@ void exec(unsigned int IR){
         int place_from_push = bigToInt();
         StackSlot slot;
         slot.isObjRef = true;  
-        StackSlot lolSlot = pop(); 
+        StackSlot lolSlot;
+        if(int_pos > 0){
+            lolSlot = pop(); 
+        }else{
+            fatalError("stack underflow");
+        }
         slot.u.objRef = GET_REFS(lolSlot.u.objRef)[place_from_push];
         push(slot);
     }else if(i == PUTFA){ // pushing value from stack to object at place from pushc 
