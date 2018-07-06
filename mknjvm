@@ -1,3 +1,5 @@
 #!/bin/sh
-gcc -Wformat -g -Wall -std=c99 -pedantic -o njvm njvm.c -I bigint/build/include -L bigint/build/lib -lbigint 
-chmod +x njvm
+(cd bigint ;
+ gcc -g -Wall -std=c99 -pedantic -o bigint.o -c bigint.c ;
+ ar -crs libbigint.a bigint.o)
+gcc -g -Wall -std=c99 -pedantic -Ibigint -Lbigint -o njvm njvm.c -lbigint

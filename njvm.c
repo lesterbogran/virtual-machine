@@ -344,8 +344,8 @@ void push(StackSlot stackSlot){
 
 StackSlot pop(){
     if(int_pos < 0){
-        empty_stack();
         StackSlot slot;
+        empty_stack();
         return slot;
     } else {
         StackSlot stack_var = int_stack_slot[int_pos - 1];
