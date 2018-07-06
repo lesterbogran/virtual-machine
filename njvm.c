@@ -387,8 +387,11 @@ void popg(int position){
  */
 void push_local(int n){
     StackSlot to_push = int_stack_slot[fp + n];
-
-    push(to_push);
+    if(to_push.isObjRef){
+        push(to_push);
+    }else{
+        fatalError("PUSHL detected number in local or parameter variable");
+    }
 }
 
 /**
