@@ -949,12 +949,10 @@ void find_pointer_in_stacks(ObjRef *obj){
            if(!IS_PRIM(global_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int pos = GET_SIZE(global_stack_slot[i].u.objRef);
-                ObjRef ref = GET_REFS(global_stack_slot[i].u.objRef);
                 for(int i = 0; i < pos; i++){
-                    ObjRef my_ref = &ref[i];
+                    ObjRef my_ref = GET_REFS(global_stack_slot[i].u.objRef)[i];
                     printf("pos: %d\n", i);
-                    //printf("field[%04d]:\t = (objref) %p\n",i, ref[i]);
-                    printf("field:\t = (objref) %p\n", (void *)my_ref);
+                    printf("field[%04d]:\t = (objref) %p\n", i, (void *)my_ref);
                 }
                 printf("\t--- end of object ---\n");
             }else{
@@ -972,12 +970,12 @@ void find_pointer_in_stacks(ObjRef *obj){
            if(!IS_PRIM(int_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int pos = GET_SIZE(int_stack_slot[i].u.objRef);
-                ObjRef ref = GET_REFS(int_stack_slot[i].u.objRef);
+                
                 for(int i = 0; i < pos; i++){
-                    ObjRef my_ref = &ref[i];
+                    ObjRef my_ref = GET_REFS(int_stack_slot[i].u.objRef)[i];
                     printf("pos: %d\n", i);
-                    //printf("field[%04d]:\t = (objref) %p\n",i, ref[i]);
-                    printf("field:\t = (objref) %p\n", (void *)my_ref);
+                    printf("field[%04d]:\t = (objref) %p\n", i, (void *)my_ref);
+
                 }
                 printf("\t--- end of object ---\n");
             }else{
