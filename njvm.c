@@ -66,11 +66,11 @@ ObjRef create_compound_object(int n);
 #define MSB (1 << (8 * sizeof(unsigned int) - 1))
 #define IS_PRIM(objRef) (((objRef)->size & MSB) == 0)
 #define GET_SIZE(objRef) ((objRef)->size & ~MSB)
-#define GET_REFS(objRef) ((ObjRef *)(objRef)->data)
+#define GET_REFS(objRef) ( (ObjRef *)(objRef)->data)
 
-#define VERSION 7
+#define VERSION 8
 #define STACK_SIZE 10000
-#define NULL 0
+#define MYNULL 0
 
 typedef struct {
     bool isObjRef;
@@ -154,7 +154,7 @@ ObjRef newPrimObject(int dataSize) {
 
     objRef = malloc(sizeof(unsigned int) +
                     dataSize * sizeof(unsigned char));
-    if (objRef == NULL) {
+    if (objRef == MYNULL) {
         fatalError("newPrimObject() got no memory");
     }
     objRef->size = dataSize;
@@ -166,7 +166,7 @@ ObjRef newCompoundObject(int dataSize){
                     sizeof(ObjRef) * dataSize);
 
     for(int i = 0; i < dataSize; i++){
-        GET_REFS(objRef)[i] = NULL;
+        GET_REFS(objRef)[i] = MYNULL;
     }
     objRef->size = dataSize | MSB;
 
@@ -308,7 +308,7 @@ int open_file(char * file_name){
 
     file = fopen(file_name, "r");
 
-    if(file != NULL){
+    if(file != MYNULL){
         identifiers_format_checking(file);
         version_checking(file);
         instructions_number_check(file);
@@ -345,6 +345,8 @@ void push(StackSlot stackSlot){
 StackSlot pop(){
     if(int_pos < 0){
         empty_stack();
+        StackSlot slot;
+        return slot;
     } else {
         StackSlot stack_var = int_stack_slot[int_pos - 1];
         int_pos--;
@@ -461,7 +463,7 @@ ObjRef create_compound_object(int n){
     objRef->size = n | MSB;
 
     for(int i = 0; i < n; i++){
-        GET_REFS(objRef)[i] = NULL;
+        GET_REFS(objRef)[i] = MYNULL;
     }
     return objRef;
 }
@@ -645,7 +647,7 @@ void exec(unsigned int IR){
             bip.op1 = poped.u.objRef;
             bigPrint(stdout);
         }else{
-            printf("%p", poped.u.objRef);
+            printf("%p", (void *)(poped.u.objRef));
         }
     }else if(i == WRCHR){
         StackSlot poped = pop();
@@ -814,17 +816,13 @@ void exec(unsigned int IR){
         push(stackSlot);
     }else if(i == GETFA){ // pushing value from the object onto stack and take place value from pushc
         StackSlot funnySlot = pop();
-        if(!IS_PRIM(funnySlot.u.objRef)){
-            bip.op1 = funnySlot.u.objRef;
-            int place_from_push = bigToInt();
-            StackSlot slot;
-            slot.isObjRef = true;  
-            StackSlot lolSlot = pop(); 
-            slot.u.objRef = GET_REFS(lolSlot.u.objRef)[place_from_push];
-            push(slot);
-        }else{
-            fatalError("stack underflow");
-        }
+        bip.op1 = funnySlot.u.objRef;
+        int place_from_push = bigToInt();
+        StackSlot slot;
+        slot.isObjRef = true;  
+        StackSlot lolSlot = pop(); 
+        slot.u.objRef = GET_REFS(lolSlot.u.objRef)[place_from_push];
+        push(slot);
     }else if(i == PUTFA){ // pushing value from stack to object at place from pushc 
         StackSlot num_to_push = pop();
         bip.op1 = pop().u.objRef;
@@ -833,7 +831,7 @@ void exec(unsigned int IR){
         GET_REFS(arr_slot.u.objRef)[place_from_push] = num_to_push.u.objRef;  
     }else if(i == GETSZ){
         StackSlot slot = pop();
-        if(slot.u.objRef != NULL){
+        if(slot.u.objRef != MYNULL){
             int size = GET_SIZE(slot.u.objRef);
             bigFromInt(size);
             StackSlot slot;
@@ -841,12 +839,12 @@ void exec(unsigned int IR){
             slot.u.objRef = bip.res;
             push(slot);
         }else{
-            fatalError("stack underflow\n");
+            fatalError("stack underflow");
         }
     }else if(i == PUSHN){
         StackSlot nilSlot;
         nilSlot.isObjRef = true;
-        nilSlot.u.objRef = NULL;
+        nilSlot.u.objRef = MYNULL;
         push(nilSlot);
     }else if(i == REFEQ){
         StackSlot ref_one = pop();
@@ -897,9 +895,9 @@ void print_global_stack(){
     while (i < global_stack_size){
         printf("data[%0*d", (2 - i / 10), 0);
         printf("%d]: \t", i);
-        if(global_stack_slot[i].isObjRef != NULL){
+        if(global_stack_slot[i].isObjRef != MYNULL){
             printf("(objref)");
-            printf(" %p \n", global_stack_slot[i].u.objRef);
+            printf(" %p \n", (void*)global_stack_slot[i].u.objRef);
         }else{
             printf("(nil)\n");
         }
@@ -910,7 +908,7 @@ void print_global_stack(){
 
 void print_stack_slot(StackSlot stackSlot, int SP){
     if(stackSlot.isObjRef){
-        printf("%d:\t (objref) %p \n", SP, stackSlot.u.objRef);
+        printf("%d:\t (objref) %p \n", SP, (void*)(stackSlot.u.objRef));
     }else{
         printf("%d:\t (number) %d \n", SP, stackSlot.u.number);
     }
@@ -947,14 +945,16 @@ void print_stack_state(){
 /** this function finds pointer in stacks and prints value of this pointer */
 void find_pointer_in_stacks(ObjRef *obj){
     for(int i = 0; i < global_stack_pointer; i++){
-        if(global_stack_slot[i].u.objRef == obj){
+        if((ObjRef *)(global_stack_slot[i].u.objRef) == obj){
            if(!IS_PRIM(global_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int pos = GET_SIZE(global_stack_slot[i].u.objRef);
                 ObjRef ref = GET_REFS(global_stack_slot[i].u.objRef);
                 for(int i = 0; i < pos; i++){
+                    ObjRef my_ref = &ref[i];
                     printf("pos: %d\n", i);
-                    printf("field[%04d]:\t = (objref) %p\n",i, ref[i]);
+                    //printf("field[%04d]:\t = (objref) %p\n",i, ref[i]);
+                    printf("field:\t = (objref) %p\n", (void *)my_ref);
                 }
                 printf("\t--- end of object ---\n");
             }else{
@@ -968,13 +968,16 @@ void find_pointer_in_stacks(ObjRef *obj){
     }
 
     for(int i = 0; i < int_pos; i++){
-         if(int_stack_slot[i].u.objRef == obj){
+         if((ObjRef *)(int_stack_slot[i].u.objRef) == obj){
            if(!IS_PRIM(int_stack_slot[i].u.objRef)){
                 printf("<compound object>\n");
                 int pos = GET_SIZE(int_stack_slot[i].u.objRef);
                 ObjRef ref = GET_REFS(int_stack_slot[i].u.objRef);
                 for(int i = 0; i < pos; i++){
-                    printf("field[%04d]:\t = (objref) %p\n",i, ref[i]);
+                    ObjRef my_ref = &ref[i];
+                    printf("pos: %d\n", i);
+                    //printf("field[%04d]:\t = (objref) %p\n",i, ref[i]);
+                    printf("field:\t = (objref) %p\n", (void *)my_ref);
                 }
                 printf("\t--- end of object ---\n");
             }else{
@@ -1028,7 +1031,7 @@ void exec_prog(){
                     }else if(strcmp("object", input) == 0){
                         ObjRef *pointer;
                         printf("object reference?\n");
-                        scanf("%p", &pointer);
+                        scanf("%p", (void **)(&pointer));
 
                         find_pointer_in_stacks(pointer);
                         ProgramCounter--;
@@ -1096,7 +1099,7 @@ void debugging(char *file_name){
 }
 
 int main(int argc, char *argv[]) {
-    if (argv[1] == NULL) {
+    if (argv[1] == MYNULL) {
         printf("Error: no code file specified\n");
     }else{
         if (strcmp("--help", argv[1]) == 0) {
@@ -1107,14 +1110,14 @@ int main(int argc, char *argv[]) {
         }else if(strcmp("--version", argv[1]) == 0){
             printf("Ninja Virtual Machine version %d \n", VERSION);
         }else if(strcmp("--debug", argv[1]) == 0){
-            if(argv[2] != NULL){
+            if(argv[2] != MYNULL){
                 debugging(argv[2]);
                 printf("Ninja Virtual Machine stopped\n");
             }else{
                 printf("ERROR: Cannot open file\n");
             }
         }else{
-            if(argv[1] != NULL){
+            if(argv[1] != MYNULL){
                 open_file(argv[1]);
                 exec_prog();
                 printf("Ninja Virtual Machine stopped\n");
